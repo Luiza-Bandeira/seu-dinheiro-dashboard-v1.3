@@ -344,7 +344,7 @@ export function InvestmentSimulator({ userId }: InvestmentSimulatorProps) {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="text-center p-6 rounded-lg bg-gradient-primary">
+                  <div className="text-center p-6 rounded-lg bg-gradient-to-br from-brand-blue to-brand-magenta">
                     <p className="text-sm text-white/80 mb-2">Aporte Mensal Necessário</p>
                     <p className="text-4xl font-bold text-white">
                       R$ {pmtResult.toFixed(2)}
@@ -368,6 +368,40 @@ export function InvestmentSimulator({ userId }: InvestmentSimulatorProps) {
                       <span className="text-muted-foreground">Total a investir:</span>
                       <span className="font-semibold">R$ {(pmtResult * pmtInputs.months).toFixed(2)}</span>
                     </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-brand-pink/10 border-2 border-brand-pink/30">
+                    <p className="text-sm text-center text-muted-foreground mb-3">
+                      Com esse aporte, você alcançará seu objetivo em {pmtInputs.months} meses
+                    </p>
+                    <Button 
+                      className="w-full bg-brand-magenta hover:bg-brand-magenta/90"
+                      onClick={async () => {
+                        const { error } = await supabase.from("finances").insert({
+                          user_id: userId,
+                          type: "fixed_expense",
+                          category: "Aporte para Objetivos Financeiros",
+                          value: pmtResult,
+                          description: selectedGoalId ? `Aporte para: ${goals.find(g => g.id === selectedGoalId)?.goal_name}` : "Aporte mensal planejado",
+                          date: new Date().toISOString().split("T")[0],
+                        });
+
+                        if (error) {
+                          toast({
+                            title: "Erro ao adicionar ao orçamento",
+                            description: error.message,
+                            variant: "destructive",
+                          });
+                        } else {
+                          toast({
+                            title: "Adicionado ao orçamento!",
+                            description: "O aporte foi incluído no seu orçamento mensal.",
+                          });
+                        }
+                      }}
+                    >
+                      Adicionar ao Orçamento
+                    </Button>
                   </div>
                 </div>
               )}

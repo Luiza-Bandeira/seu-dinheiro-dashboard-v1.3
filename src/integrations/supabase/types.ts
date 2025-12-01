@@ -118,6 +118,84 @@ export type Database = {
           },
         ]
       }
+      debts_payable: {
+        Row: {
+          amount: number
+          created_at: string
+          creditor_name: string
+          description: string | null
+          due_date: string
+          id: string
+          paid_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          creditor_name: string
+          description?: string | null
+          due_date: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creditor_name?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      debts_receivable: {
+        Row: {
+          amount: number
+          created_at: string
+          debtor_name: string
+          description: string | null
+          due_date: string
+          id: string
+          received_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debtor_name: string
+          description?: string | null
+          due_date: string
+          id?: string
+          received_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debtor_name?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          received_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       finances: {
         Row: {
           category: string

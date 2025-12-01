@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BudgetCalculator } from "@/components/tools/BudgetCalculator";
 import { InvestmentSimulator } from "@/components/tools/InvestmentSimulator";
 import { GoalsManager } from "@/components/tools/GoalsManager";
-import { BanksAndCards } from "@/components/tools/BanksAndCards";
+import { BasicInformation } from "@/components/tools/BasicInformation";
 import { CurrentInvestments } from "@/components/tools/CurrentInvestments";
 import { ReductionGoals } from "@/components/tools/ReductionGoals";
 import { WeeklyTracking } from "@/components/tools/WeeklyTracking";
@@ -78,43 +78,41 @@ export default function Tools() {
               </p>
             </div>
 
-            <Tabs defaultValue="budget" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 gap-2">
-                <TabsTrigger value="budget">Orçamento</TabsTrigger>
-                <TabsTrigger value="investment">Simulador</TabsTrigger>
-                <TabsTrigger value="goals">Metas</TabsTrigger>
-                <TabsTrigger value="banks">Bancos</TabsTrigger>
-                <TabsTrigger value="current-investments">Investimentos</TabsTrigger>
-                <TabsTrigger value="reduction">Redução</TabsTrigger>
-                <TabsTrigger value="weekly">Semanal</TabsTrigger>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-6 gap-1 lg:gap-2">
+                <TabsTrigger value="basic" className="whitespace-nowrap">Informações Básicas</TabsTrigger>
+                <TabsTrigger value="current-investments" className="whitespace-nowrap">Investimentos</TabsTrigger>
+                <TabsTrigger value="budget" className="whitespace-nowrap">Orçamento</TabsTrigger>
+                <TabsTrigger value="goals" className="whitespace-nowrap">Objetivos</TabsTrigger>
+                <TabsTrigger value="investment" className="whitespace-nowrap">Simulação de Aportes</TabsTrigger>
+                <TabsTrigger value="reduction" className="whitespace-nowrap">Redução Semanal</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="budget" className="mt-6">
-                <BudgetCalculator userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="investment" className="mt-6">
-                <InvestmentSimulator userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="goals" className="mt-6">
-                <GoalsManager userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="banks" className="mt-6">
-                <BanksAndCards userId={user?.id || ""} />
+              <TabsContent value="basic" className="mt-6">
+                <BasicInformation userId={user?.id || ""} />
               </TabsContent>
 
               <TabsContent value="current-investments" className="mt-6">
                 <CurrentInvestments userId={user?.id || ""} />
               </TabsContent>
 
-              <TabsContent value="reduction" className="mt-6">
-                <ReductionGoals userId={user?.id || ""} />
+              <TabsContent value="budget" className="mt-6">
+                <BudgetCalculator userId={user?.id || ""} />
               </TabsContent>
 
-              <TabsContent value="weekly" className="mt-6">
-                <WeeklyTracking userId={user?.id || ""} />
+              <TabsContent value="goals" className="mt-6">
+                <GoalsManager userId={user?.id || ""} />
+              </TabsContent>
+
+              <TabsContent value="investment" className="mt-6">
+                <InvestmentSimulator userId={user?.id || ""} />
+              </TabsContent>
+
+              <TabsContent value="reduction" className="mt-6">
+                <ReductionGoals userId={user?.id || ""} />
+                <div className="mt-6">
+                  <WeeklyTracking userId={user?.id || ""} />
+                </div>
               </TabsContent>
             </Tabs>
           </div>

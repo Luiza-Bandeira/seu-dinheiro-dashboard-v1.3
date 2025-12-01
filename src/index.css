@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Brand Colors - Economiza */
+    --brand-blue: 215 95% 21%; /* #0B2860 - Azul escuro profissional */
+    --brand-pink: 354 85% 83%; /* #f7acb3 - Rosa suave acolhedor */
+    --brand-magenta: 337 87% 52%; /* #ef137c - Magenta vibrante para CTAs */
+    
+    /* Base Colors */
+    --background: 0 0% 100%; /* Branco puro */
+    --foreground: 215 95% 21%; /* Azul escuro para textos */
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 95% 21%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 95% 21%;
+
+    /* Primary - Magenta para CTAs importantes */
+    --primary: 337 87% 52%; /* #ef137c */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Azul escuro da marca */
+    --secondary: 215 95% 21%; /* #0B2860 */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent - Rosa suave */
+    --accent: 354 85% 83%; /* #f7acb3 */
+    --accent-foreground: 215 95% 21%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 20% 40%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 337 87% 52%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(337 87% 52%), hsl(337 87% 62%));
+    --gradient-secondary: linear-gradient(135deg, hsl(215 95% 21%), hsl(215 85% 31%));
+    --gradient-accent: linear-gradient(135deg, hsl(354 85% 83%), hsl(354 75% 88%));
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 95% 21% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 95% 21% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 95% 21% / 0.1);
+    --shadow-glow: 0 0 20px hsl(337 87% 52% / 0.3);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 215 95% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 215 80% 15%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 215 80% 15%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 337 87% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 50% 25%;
+    --secondary-foreground: 0 0% 98%;
+
+    --accent: 354 85% 83%;
+    --accent-foreground: 215 95% 21%;
+
+    --muted: 215 50% 20%;
+    --muted-foreground: 215 20% 65%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 215 50% 25%;
+    --input: 215 50% 25%;
+    --ring: 337 87% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

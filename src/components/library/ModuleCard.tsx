@@ -1,0 +1,92 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface ModuleCardProps {
+  module: {
+    id: string;
+    title: string;
+    description: string;
+    order_index: number;
+  };
+  userId: string;
+  index: number;
+}
+
+export function ModuleCard({ module, userId, index }: ModuleCardProps) {
+  const [progress, setProgress] = useState(0);
+  const [totalContents, setTotalContents] = useState(0);
+  const [completedContents, setCompletedContents] = useState(0);
+
+  useEffect(() => {
+    loadProgress();
+  }, [module.id, userId]);
+
+  const loadProgress = async () => {
+    // Get total contents for this module
+    const { count: total } = await supabase
+      .from("contents")
+      .select("*", { count: "exact", head: true })
+      .eq("module_id", module.id);
+
+    // Get completed contents for this module
+    const { data: completed } = await supabase
+      .from("progress")
+      .select("content_id, contents!inner(module_id)")
+      .eq("user_id", userId)
+      .eq("completed", true)
+      .eq("contents.module_id", module.id);
+
+    const totalCount = total || 0;
+    const completedCount = completed?.length || 0;
+    const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+    setTotalContents(totalCount);
+    setCompletedContents(completedCount);
+    setProgress(progressPercentage);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+    >
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <Badge variant="secondary" className="mb-2">
+              Módulo {module.order_index + 1}
+            </Badge>
+            {progress === 100 && (
+              <Badge className="bg-green-600">Completo</Badge>
+            )}
+          </div>
+          <CardTitle className="text-brand-blue">{module.title}</CardTitle>
+          <CardDescription>{module.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Progresso</span>
+              <span className="font-semibold text-brand-blue">
+                {completedContents}/{totalContents} completos
+              </span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+
+          <Button className="w-full" variant="default">
+            Ver conteúdos
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}

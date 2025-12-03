@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download } from "lucide-react";
+import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen } from "lucide-react";
 import { exportToPDF, exportToCSV, exportToXLSX, formatCurrency, formatPercentage } from "@/utils/exportUtils";
+import { AdminNotifications } from "@/components/admin/AdminNotifications";
+import { AdminLibraryManager } from "@/components/admin/AdminLibraryManager";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/components/ui/use-toast";
@@ -460,10 +462,18 @@ export default function AdminAnalytics() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="engagement" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
               <TabsTrigger value="engagement">Engajamento</TabsTrigger>
               <TabsTrigger value="risk">Em Risco ({atRiskStudents.length})</TabsTrigger>
               <TabsTrigger value="top">Destaque ({topPerformers.length})</TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-1">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Notificações</span>
+              </TabsTrigger>
+              <TabsTrigger value="library" className="flex items-center gap-1">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Biblioteca</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="engagement" className="mt-6">
@@ -651,6 +661,14 @@ export default function AdminAnalytics() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="notifications" className="mt-6">
+              <AdminNotifications profiles={profiles} />
+            </TabsContent>
+
+            <TabsContent value="library" className="mt-6">
+              <AdminLibraryManager />
             </TabsContent>
           </Tabs>
         </motion.div>

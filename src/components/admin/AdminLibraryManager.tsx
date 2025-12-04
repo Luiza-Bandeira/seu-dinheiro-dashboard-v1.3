@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { 
   BookOpen, Plus, Edit2, Trash2, ChevronDown, ChevronRight, 
   Video, FileText, ClipboardList, CheckSquare, Star,
-  GripVertical, ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, X
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +39,17 @@ interface Content {
   module_id: string | null;
 }
 
+interface PendingContent {
+  tempId: string;
+  id?: string;
+  title: string;
+  description: string;
+  type: ContentType;
+  url: string;
+  isNew: boolean;
+  toDelete?: boolean;
+}
+
 const contentTypeIcons: Record<ContentType, typeof Video> = {
   video: Video,
   pdf: FileText,
@@ -58,21 +71,14 @@ export function AdminLibraryManager() {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedModules, setExpandedModules] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   // Module form state
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [moduleTitle, setModuleTitle] = useState("");
   const [moduleDescription, setModuleDescription] = useState("");
-
-  // Content form state
-  const [contentDialogOpen, setContentDialogOpen] = useState(false);
-  const [editingContent, setEditingContent] = useState<Content | null>(null);
-  const [contentModuleId, setContentModuleId] = useState<string>("");
-  const [contentTitle, setContentTitle] = useState("");
-  const [contentDescription, setContentDescription] = useState("");
-  const [contentType, setContentType] = useState<ContentType>("video");
-  const [contentUrl, setContentUrl] = useState("");
+  const [pendingContents, setPendingContents] = useState<PendingContent[]>([]);
 
   useEffect(() => {
     loadData();
@@ -104,42 +110,185 @@ export function AdminLibraryManager() {
       setEditingModule(module);
       setModuleTitle(module.title);
       setModuleDescription(module.description || "");
+      // Load existing contents for this module
+      const moduleContents = contents
+        .filter((c) => c.module_id === module.id)
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((c) => ({
+          tempId: c.id,
+          id: c.id,
+          title: c.title,
+          description: c.description || "",
+          type: c.type,
+          url: c.url || "",
+          isNew: false,
+        }));
+      setPendingContents(moduleContents);
     } else {
       setEditingModule(null);
       setModuleTitle("");
       setModuleDescription("");
+      setPendingContents([]);
     }
     setModuleDialogOpen(true);
   };
 
+  const addPendingContent = () => {
+    setPendingContents((prev) => [
+      ...prev,
+      {
+        tempId: crypto.randomUUID(),
+        title: "",
+        description: "",
+        type: "video",
+        url: "",
+        isNew: true,
+      },
+    ]);
+  };
+
+  const updatePendingContent = (tempId: string, field: keyof PendingContent, value: string) => {
+    setPendingContents((prev) =>
+      prev.map((c) =>
+        c.tempId === tempId ? { ...c, [field]: value } : c
+      )
+    );
+  };
+
+  const removePendingContent = (tempId: string) => {
+    setPendingContents((prev) => {
+      const content = prev.find((c) => c.tempId === tempId);
+      if (content && !content.isNew && content.id) {
+        // Mark existing content for deletion
+        return prev.map((c) =>
+          c.tempId === tempId ? { ...c, toDelete: true } : c
+        );
+      }
+      // Remove new content immediately
+      return prev.filter((c) => c.tempId !== tempId);
+    });
+  };
+
+  const movePendingContent = (index: number, direction: "up" | "down") => {
+    const visibleContents = pendingContents.filter((c) => !c.toDelete);
+    const visibleIndex = visibleContents.findIndex((_, i) => {
+      let count = 0;
+      for (let j = 0; j <= i; j++) {
+        if (!pendingContents[j]?.toDelete) count++;
+      }
+      return count - 1 === index;
+    });
+
+    if (direction === "up" && visibleIndex === 0) return;
+    if (direction === "down" && visibleIndex === visibleContents.length - 1) return;
+
+    setPendingContents((prev) => {
+      const visible = prev.filter((c) => !c.toDelete);
+      const swapIndex = direction === "up" ? index - 1 : index + 1;
+      const newVisible = [...visible];
+      [newVisible[index], newVisible[swapIndex]] = [newVisible[swapIndex], newVisible[index]];
+      
+      // Reconstruct with deleted items
+      const deleted = prev.filter((c) => c.toDelete);
+      return [...newVisible, ...deleted];
+    });
+  };
+
   const saveModule = async () => {
     if (!moduleTitle.trim()) {
-      toast({ title: "Erro", description: "Título é obrigatório", variant: "destructive" });
+      toast({ title: "Erro", description: "Título do módulo é obrigatório", variant: "destructive" });
       return;
     }
 
+    // Validate pending contents
+    const validContents = pendingContents.filter((c) => !c.toDelete);
+    for (const content of validContents) {
+      if (!content.title.trim()) {
+        toast({ title: "Erro", description: "Todos os conteúdos precisam de título", variant: "destructive" });
+        return;
+      }
+    }
+
+    setSaving(true);
+
     try {
+      let moduleId = editingModule?.id;
+
+      // Create or update module
       if (editingModule) {
         const { error } = await supabase
           .from("modules")
           .update({ title: moduleTitle, description: moduleDescription || null })
           .eq("id", editingModule.id);
         if (error) throw error;
-        toast({ title: "Módulo atualizado!" });
       } else {
         const newOrderIndex = modules.length > 0 ? Math.max(...modules.map((m) => m.order_index)) + 1 : 1;
-        const { error } = await supabase.from("modules").insert({
-          title: moduleTitle,
-          description: moduleDescription || null,
-          order_index: newOrderIndex,
-        });
+        const { data, error } = await supabase
+          .from("modules")
+          .insert({
+            title: moduleTitle,
+            description: moduleDescription || null,
+            order_index: newOrderIndex,
+          })
+          .select()
+          .single();
         if (error) throw error;
-        toast({ title: "Módulo criado!" });
+        moduleId = data.id;
       }
+
+      // Handle contents
+      const toDelete = pendingContents.filter((c) => c.toDelete && c.id);
+      const toUpdate = pendingContents.filter((c) => !c.toDelete && !c.isNew && c.id);
+      const toCreate = pendingContents.filter((c) => !c.toDelete && c.isNew);
+
+      // Delete removed contents
+      if (toDelete.length > 0) {
+        const { error } = await supabase
+          .from("contents")
+          .delete()
+          .in("id", toDelete.map((c) => c.id!));
+        if (error) throw error;
+      }
+
+      // Update existing contents
+      for (let i = 0; i < toUpdate.length; i++) {
+        const content = toUpdate[i];
+        const visibleIndex = pendingContents.filter((c) => !c.toDelete).findIndex((c) => c.tempId === content.tempId);
+        const { error } = await supabase
+          .from("contents")
+          .update({
+            title: content.title,
+            description: content.description || null,
+            type: content.type,
+            url: content.url || null,
+            order_index: visibleIndex + 1,
+          })
+          .eq("id", content.id!);
+        if (error) throw error;
+      }
+
+      // Create new contents
+      if (toCreate.length > 0 && moduleId) {
+        const existingCount = toUpdate.length;
+        const newContents = toCreate.map((content, i) => ({
+          title: content.title,
+          description: content.description || null,
+          type: content.type,
+          url: content.url || null,
+          module_id: moduleId,
+          order_index: existingCount + i + 1,
+        }));
+        const { error } = await supabase.from("contents").insert(newContents);
+        if (error) throw error;
+      }
+
+      toast({ title: editingModule ? "Módulo atualizado!" : "Módulo criado!" });
       setModuleDialogOpen(false);
       loadData();
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -183,101 +332,6 @@ export function AdminLibraryManager() {
     }
   };
 
-  // Content CRUD
-  const openContentDialog = (moduleId: string, content?: Content) => {
-    setContentModuleId(moduleId);
-    if (content) {
-      setEditingContent(content);
-      setContentTitle(content.title);
-      setContentDescription(content.description || "");
-      setContentType(content.type);
-      setContentUrl(content.url || "");
-    } else {
-      setEditingContent(null);
-      setContentTitle("");
-      setContentDescription("");
-      setContentType("video");
-      setContentUrl("");
-    }
-    setContentDialogOpen(true);
-  };
-
-  const saveContent = async () => {
-    if (!contentTitle.trim()) {
-      toast({ title: "Erro", description: "Título é obrigatório", variant: "destructive" });
-      return;
-    }
-
-    try {
-      if (editingContent) {
-        const { error } = await supabase
-          .from("contents")
-          .update({
-            title: contentTitle,
-            description: contentDescription || null,
-            type: contentType,
-            url: contentUrl || null,
-          })
-          .eq("id", editingContent.id);
-        if (error) throw error;
-        toast({ title: "Conteúdo atualizado!" });
-      } else {
-        const moduleContents = contents.filter((c) => c.module_id === contentModuleId);
-        const newOrderIndex = moduleContents.length > 0 ? Math.max(...moduleContents.map((c) => c.order_index)) + 1 : 1;
-
-        const { error } = await supabase.from("contents").insert({
-          title: contentTitle,
-          description: contentDescription || null,
-          type: contentType,
-          url: contentUrl || null,
-          module_id: contentModuleId,
-          order_index: newOrderIndex,
-        });
-        if (error) throw error;
-        toast({ title: "Conteúdo criado!" });
-      }
-      setContentDialogOpen(false);
-      loadData();
-    } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const deleteContent = async (contentId: string) => {
-    if (!confirm("Excluir este conteúdo?")) return;
-
-    try {
-      const { error } = await supabase.from("contents").delete().eq("id", contentId);
-      if (error) throw error;
-      toast({ title: "Conteúdo excluído!" });
-      loadData();
-    } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    }
-  };
-
-  const moveContent = async (contentId: string, moduleId: string, direction: "up" | "down") => {
-    const moduleContents = contents.filter((c) => c.module_id === moduleId).sort((a, b) => a.order_index - b.order_index);
-    const index = moduleContents.findIndex((c) => c.id === contentId);
-
-    if (direction === "up" && index === 0) return;
-    if (direction === "down" && index === moduleContents.length - 1) return;
-
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    const currentContent = moduleContents[index];
-    const swapContent = moduleContents[swapIndex];
-
-    try {
-      await Promise.all([
-        supabase.from("contents").update({ order_index: swapContent.order_index }).eq("id", currentContent.id),
-        supabase.from("contents").update({ order_index: currentContent.order_index }).eq("id", swapContent.id),
-      ]);
-      loadData();
-    } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -285,6 +339,8 @@ export function AdminLibraryManager() {
       </div>
     );
   }
+
+  const visiblePendingContents = pendingContents.filter((c) => !c.toDelete);
 
   return (
     <div className="space-y-6">
@@ -376,12 +432,12 @@ export function AdminLibraryManager() {
 
                     <CollapsibleContent>
                       <CardContent className="pt-0 space-y-3">
-                        {moduleContents.map((content, contentIndex) => {
+                        {moduleContents.map((content) => {
                           const Icon = contentTypeIcons[content.type];
                           return (
                             <div
                               key={content.id}
-                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                             >
                               <div className="flex items-center gap-3">
                                 <Icon className="h-4 w-4 text-brand-magenta" />
@@ -395,53 +451,23 @@ export function AdminLibraryManager() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => moveContent(content.id, module.id, "up")}
-                                  disabled={contentIndex === 0}
-                                >
-                                  <ArrowUp className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => moveContent(content.id, module.id, "down")}
-                                  disabled={contentIndex === moduleContents.length - 1}
-                                >
-                                  <ArrowDown className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => openContentDialog(module.id, content)}
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => deleteContent(content.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
                             </div>
                           );
                         })}
 
+                        {moduleContents.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            Nenhum conteúdo neste módulo
+                          </div>
+                        )}
+
                         <Button
                           variant="outline"
                           className="w-full border-dashed"
-                          onClick={() => openContentDialog(module.id)}
+                          onClick={() => openModuleDialog(module)}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar Conteúdo
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Editar Módulo e Conteúdos
                         </Button>
                       </CardContent>
                     </CollapsibleContent>
@@ -469,108 +495,204 @@ export function AdminLibraryManager() {
         )}
       </div>
 
-      {/* Module Dialog */}
+      {/* Module Dialog with Contents */}
       <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingModule ? "Editar Módulo" : "Novo Módulo"}</DialogTitle>
             <DialogDescription>
-              {editingModule ? "Atualize as informações do módulo" : "Crie um novo módulo para a biblioteca"}
+              {editingModule ? "Atualize as informações do módulo e seus conteúdos" : "Crie um novo módulo com vídeos, PDFs e outros recursos"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Título</Label>
-              <Input
-                placeholder="Ex: Introdução às Finanças"
-                value={moduleTitle}
-                onChange={(e) => setModuleTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição (opcional)</Label>
-              <Textarea
-                placeholder="Descrição do módulo..."
-                value={moduleDescription}
-                onChange={(e) => setModuleDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModuleDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={saveModule} className="bg-brand-magenta hover:bg-brand-magenta/90">
-              {editingModule ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Content Dialog */}
-      <Dialog open={contentDialogOpen} onOpenChange={setContentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingContent ? "Editar Conteúdo" : "Novo Conteúdo"}</DialogTitle>
-            <DialogDescription>
-              {editingContent ? "Atualize as informações do conteúdo" : "Adicione um novo conteúdo ao módulo"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Título</Label>
-              <Input
-                placeholder="Ex: Vídeo de Boas-Vindas"
-                value={contentTitle}
-                onChange={(e) => setContentTitle(e.target.value)}
-              />
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {/* Module Info */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Título do Módulo *</Label>
+                  <Input
+                    placeholder="Ex: Introdução às Finanças"
+                    value={moduleTitle}
+                    onChange={(e) => setModuleTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição (opcional)</Label>
+                  <Textarea
+                    placeholder="Descrição do módulo..."
+                    value={moduleDescription}
+                    onChange={(e) => setModuleDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Contents Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Conteúdos do Módulo</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPendingContent}
+                    className="border-brand-magenta text-brand-magenta hover:bg-brand-magenta/10"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+
+                <AnimatePresence>
+                  {visiblePendingContents.length === 0 ? (
+                    <div className="text-center py-6 border-2 border-dashed rounded-lg">
+                      <p className="text-muted-foreground text-sm">
+                        Nenhum conteúdo adicionado ainda.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={addPendingContent}
+                        className="mt-2"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Adicionar primeiro conteúdo
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {visiblePendingContents.map((content, index) => {
+                        const Icon = contentTypeIcons[content.type];
+                        return (
+                          <motion.div
+                            key={content.tempId}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="p-4 border rounded-lg bg-muted/30 space-y-3"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-4 w-4 text-brand-magenta" />
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  Conteúdo #{index + 1}
+                                </span>
+                                {content.isNew && (
+                                  <Badge variant="secondary" className="text-xs">Novo</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => movePendingContent(index, "up")}
+                                  disabled={index === 0}
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => movePendingContent(index, "down")}
+                                  disabled={index === visiblePendingContents.length - 1}
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => removePendingContent(content.tempId)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Tipo</Label>
+                                <Select
+                                  value={content.type}
+                                  onValueChange={(v) => updatePendingContent(content.tempId, "type", v)}
+                                >
+                                  <SelectTrigger className="h-9">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(Object.keys(contentTypeLabels) as ContentType[]).map((type) => {
+                                      const TypeIcon = contentTypeIcons[type];
+                                      return (
+                                        <SelectItem key={type} value={type}>
+                                          <div className="flex items-center gap-2">
+                                            <TypeIcon className="h-4 w-4" />
+                                            {contentTypeLabels[type]}
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Título *</Label>
+                                <Input
+                                  placeholder="Ex: Vídeo de Boas-Vindas"
+                                  value={content.title}
+                                  onChange={(e) => updatePendingContent(content.tempId, "title", e.target.value)}
+                                  className="h-9"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs">URL do Recurso</Label>
+                              <Input
+                                placeholder="https://youtube.com/... ou https://drive.google.com/..."
+                                value={content.url}
+                                onChange={(e) => updatePendingContent(content.tempId, "url", e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs">Descrição (opcional)</Label>
+                              <Input
+                                placeholder="Breve descrição do conteúdo"
+                                value={content.description}
+                                onChange={(e) => updatePendingContent(content.tempId, "description", e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(contentTypeLabels) as ContentType[]).map((type) => {
-                    const Icon = contentTypeIcons[type];
-                    return (
-                      <SelectItem key={type} value={type}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          {contentTypeLabels[type]}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>URL (opcional)</Label>
-              <Input
-                placeholder="https://..."
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição (opcional)</Label>
-              <Textarea
-                placeholder="Descrição do conteúdo..."
-                value={contentDescription}
-                onChange={(e) => setContentDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContentDialogOpen(false)}>
+          </ScrollArea>
+
+          <DialogFooter className="mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => setModuleDialogOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={saveContent} className="bg-brand-magenta hover:bg-brand-magenta/90">
-              {editingContent ? "Salvar" : "Criar"}
+            <Button 
+              onClick={saveModule} 
+              className="bg-brand-magenta hover:bg-brand-magenta/90"
+              disabled={saving}
+            >
+              {saving ? "Salvando..." : editingModule ? "Salvar Alterações" : "Criar Módulo"}
             </Button>
           </DialogFooter>
         </DialogContent>

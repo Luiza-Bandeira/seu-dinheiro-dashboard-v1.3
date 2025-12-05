@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +20,7 @@ interface ModuleCardProps {
 }
 
 export function ModuleCard({ module, userId, index }: ModuleCardProps) {
+  const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [totalContents, setTotalContents] = useState(0);
   const [completedContents, setCompletedContents] = useState(0);
@@ -81,7 +83,11 @@ export function ModuleCard({ module, userId, index }: ModuleCardProps) {
             <Progress value={progress} className="h-2" />
           </div>
 
-          <Button className="w-full" variant="default">
+          <Button 
+            className="w-full" 
+            variant="default"
+            onClick={() => navigate(`/library/${module.id}`)}
+          >
             Ver conteúdos
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>

@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Library from "./pages/Library";
+import ModuleDetail from "./pages/ModuleDetail";
 import Tools from "./pages/Tools";
 import Reports from "./pages/Reports";
 import AdminAnalytics from "./pages/AdminAnalytics";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/library/:moduleId" element={<ModuleDetail />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/admin" element={<AdminAnalytics />} />

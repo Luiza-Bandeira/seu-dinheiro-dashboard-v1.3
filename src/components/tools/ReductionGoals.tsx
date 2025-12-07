@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Target } from "lucide-react";
+import { Plus, Trash2, Target, Pencil } from "lucide-react";
 
 interface ReductionGoalsProps {
   userId: string;
@@ -30,6 +31,7 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
     target_value: 0,
     deadline: "",
   });
+  const [editingGoal, setEditingGoal] = useState<ReductionGoal | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
   };
 
   const handleAddGoal = async () => {
+    if (loading) return;
+
     if (!newGoal.category || newGoal.target_value <= 0) {
       toast({
         title: "Erro",
@@ -97,6 +101,41 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
     setLoading(false);
   };
 
+  const handleUpdateGoal = async () => {
+    if (!editingGoal || loading) return;
+
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("reduction_goals")
+      .update({
+        category: editingGoal.category,
+        period_type: editingGoal.period_type,
+        target_value: editingGoal.target_value,
+        deadline: editingGoal.deadline || null,
+      })
+      .eq("id", editingGoal.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar meta",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Meta atualizada!",
+      description: "Sua meta de redução foi atualizada com sucesso.",
+    });
+
+    setEditingGoal(null);
+    await loadGoals();
+    setLoading(false);
+  };
+
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("reduction_goals").delete().eq("id", id);
 
@@ -136,7 +175,7 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
 
     if (newStatus === "completed") {
       toast({
-        title: "🎉 Parabéns!",
+        title: "Parabéns!",
         description: "Meta de redução concluída!",
       });
     }
@@ -146,6 +185,70 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Edit Goal Dialog */}
+      <Dialog open={!!editingGoal} onOpenChange={(open) => !open && setEditingGoal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Meta de Redução
+            </DialogTitle>
+          </DialogHeader>
+          {editingGoal && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Input
+                  value={editingGoal.category}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, category: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Período</Label>
+                <Select
+                  value={editingGoal.period_type}
+                  onValueChange={(value) => setEditingGoal({ ...editingGoal, period_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor Máximo (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingGoal.target_value || ""}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, target_value: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Prazo</Label>
+                <Input
+                  type="date"
+                  value={editingGoal.deadline || ""}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, deadline: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingGoal(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateGoal} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-brand-blue">Criar Meta de Redução</CardTitle>
@@ -182,6 +285,7 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newGoal.target_value || ""}
               onChange={(e) =>
@@ -224,7 +328,7 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <h4 className="font-semibold text-brand-blue">{goal.category}</h4>
                           <Badge variant={goal.period_type === "mensal" ? "default" : "secondary"}>
                             {goal.period_type === "mensal" ? "Mensal" : "Semanal"}
@@ -254,14 +358,24 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
                           </Button>
                         )}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(goal.id)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingGoal(goal)}
+                          className="h-8 w-8"
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(goal.id)}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

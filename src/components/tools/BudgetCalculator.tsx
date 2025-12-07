@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Plus, Trash2 } from "lucide-react";
+import { Database } from "@/integrations/supabase/types";
 
+type FinanceType = Database["public"]["Enums"]["finance_type"];
 interface BudgetCalculatorProps {
   userId: string;
 }
@@ -53,6 +55,9 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
   };
 
   const handleAddEntry = async () => {
+    // Proteção contra duplo clique
+    if (loading) return;
+
     if (!newEntry.category || newEntry.value <= 0) {
       toast({
         title: "Erro",
@@ -66,7 +71,7 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
 
     const { error } = await supabase.from("finances").insert([{
       user_id: userId,
-      type: newEntry.type as any,
+      type: newEntry.type as FinanceType,
       category: newEntry.category,
       value: newEntry.value,
       description: newEntry.description,
@@ -183,9 +188,10 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newEntry.value || ""}
-              onChange={(e) => setNewEntry({ ...newEntry, value: parseFloat(e.target.value) })}
+              onChange={(e) => setNewEntry({ ...newEntry, value: parseFloat(e.target.value) || 0 })}
             />
           </div>
 

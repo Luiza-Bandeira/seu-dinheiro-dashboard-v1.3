@@ -51,6 +51,9 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
   };
 
   const handleAddGoal = async () => {
+    // Proteção contra duplo clique
+    if (loading) return;
+
     if (!newGoal.goal_name || newGoal.target_value <= 0) {
       toast({
         title: "Erro",
@@ -168,6 +171,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newGoal.target_value || ""}
               onChange={(e) =>
@@ -181,6 +185,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newGoal.current_value || ""}
               onChange={(e) =>
@@ -262,17 +267,43 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
                               <Input
                                 type="number"
                                 step="0.01"
+                                inputMode="decimal"
                                 placeholder="Adicionar valor"
+                                id={`add-value-${goal.id}`}
+                                className="flex-1"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     const input = e.target as HTMLInputElement;
-                                    const newValue =
-                                      Number(goal.current_value) + parseFloat(input.value);
-                                    handleUpdateProgress(goal.id, newValue);
-                                    input.value = "";
+                                    const addValue = parseFloat(input.value);
+                                    if (!isNaN(addValue) && addValue > 0) {
+                                      const newValue = Number(goal.current_value) + addValue;
+                                      handleUpdateProgress(goal.id, newValue);
+                                      input.value = "";
+                                    }
                                   }
                                 }}
                               />
+                              <Button
+                                size="icon"
+                                className="h-10 w-10 shrink-0"
+                                onClick={() => {
+                                  const input = document.getElementById(`add-value-${goal.id}`) as HTMLInputElement;
+                                  const addValue = parseFloat(input.value);
+                                  if (!isNaN(addValue) && addValue > 0) {
+                                    const newValue = Number(goal.current_value) + addValue;
+                                    handleUpdateProgress(goal.id, newValue);
+                                    input.value = "";
+                                  } else {
+                                    toast({
+                                      title: "Valor inválido",
+                                      description: "Digite um valor maior que zero",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
                             </div>
                           )}
 

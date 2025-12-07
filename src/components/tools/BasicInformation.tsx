@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, CreditCard, Building2, Wallet, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Plus, Trash2, CreditCard, Building2, Wallet, AlertCircle, CheckCircle, Clock, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface BasicInformationProps {
@@ -50,6 +51,11 @@ export function BasicInformation({ userId }: BasicInformationProps) {
   const [debtsPayable, setDebtsPayable] = useState<DebtPayable[]>([]);
   const [debtsReceivable, setDebtsReceivable] = useState<DebtReceivable[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Edit states
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [editingDebtPayable, setEditingDebtPayable] = useState<DebtPayable | null>(null);
+  const [editingDebtReceivable, setEditingDebtReceivable] = useState<DebtReceivable | null>(null);
 
   const [newAccount, setNewAccount] = useState({
     name: "",
@@ -113,6 +119,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
   };
 
   const handleAddAccount = async () => {
+    if (loading) return;
     if (!newAccount.name) {
       toast({
         title: "Erro",
@@ -138,7 +145,34 @@ export function BasicInformation({ userId }: BasicInformationProps) {
     setLoading(false);
   };
 
+  const handleUpdateAccount = async () => {
+    if (!editingAccount || loading) return;
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("banks_accounts")
+      .update({
+        name: editingAccount.name,
+        type: editingAccount.type,
+        card_limit: editingAccount.card_limit,
+        annual_fee: editingAccount.annual_fee,
+        interest_rate: editingAccount.interest_rate,
+        other_fees: editingAccount.other_fees,
+      })
+      .eq("id", editingAccount.id);
+
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Atualizado!", description: "Conta/cartão atualizado." });
+      setEditingAccount(null);
+      await loadAccounts();
+    }
+    setLoading(false);
+  };
+
   const handleAddDebtPayable = async () => {
+    if (loading) return;
     if (!newDebtPayable.creditor_name || newDebtPayable.amount <= 0 || !newDebtPayable.due_date) {
       toast({
         title: "Erro",
@@ -164,7 +198,32 @@ export function BasicInformation({ userId }: BasicInformationProps) {
     setLoading(false);
   };
 
+  const handleUpdateDebtPayable = async () => {
+    if (!editingDebtPayable || loading) return;
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("debts_payable")
+      .update({
+        creditor_name: editingDebtPayable.creditor_name,
+        amount: editingDebtPayable.amount,
+        due_date: editingDebtPayable.due_date,
+        description: editingDebtPayable.description,
+      })
+      .eq("id", editingDebtPayable.id);
+
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Atualizado!", description: "Dívida atualizada." });
+      setEditingDebtPayable(null);
+      await loadDebtsPayable();
+    }
+    setLoading(false);
+  };
+
   const handleAddDebtReceivable = async () => {
+    if (loading) return;
     if (!newDebtReceivable.debtor_name || newDebtReceivable.amount <= 0 || !newDebtReceivable.due_date) {
       toast({
         title: "Erro",
@@ -185,6 +244,30 @@ export function BasicInformation({ userId }: BasicInformationProps) {
     } else {
       toast({ title: "Adicionado!", description: "Valor a receber registrado." });
       setNewDebtReceivable({ debtor_name: "", amount: 0, due_date: "", description: "" });
+      await loadDebtsReceivable();
+    }
+    setLoading(false);
+  };
+
+  const handleUpdateDebtReceivable = async () => {
+    if (!editingDebtReceivable || loading) return;
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("debts_receivable")
+      .update({
+        debtor_name: editingDebtReceivable.debtor_name,
+        amount: editingDebtReceivable.amount,
+        due_date: editingDebtReceivable.due_date,
+        description: editingDebtReceivable.description,
+      })
+      .eq("id", editingDebtReceivable.id);
+
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Atualizado!", description: "Valor a receber atualizado." });
+      setEditingDebtReceivable(null);
       await loadDebtsReceivable();
     }
     setLoading(false);
@@ -267,6 +350,206 @@ export function BasicInformation({ userId }: BasicInformationProps) {
 
   return (
     <div className="space-y-6">
+      {/* Edit Account Dialog */}
+      <Dialog open={!!editingAccount} onOpenChange={(open) => !open && setEditingAccount(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Conta/Cartão
+            </DialogTitle>
+          </DialogHeader>
+          {editingAccount && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome</Label>
+                <Input
+                  value={editingAccount.name}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={editingAccount.type}
+                  onValueChange={(value) => setEditingAccount({ ...editingAccount, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="conta">Conta Bancária</SelectItem>
+                    <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                    <SelectItem value="carteira_digital">Carteira Digital</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editingAccount.type === "cartao" && (
+                <div className="space-y-2">
+                  <Label>Limite do Cartão (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={editingAccount.card_limit || ""}
+                    onChange={(e) => setEditingAccount({ ...editingAccount, card_limit: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Anuidade (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={editingAccount.annual_fee || ""}
+                    onChange={(e) => setEditingAccount({ ...editingAccount, annual_fee: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Juros (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={editingAccount.interest_rate || ""}
+                    onChange={(e) => setEditingAccount({ ...editingAccount, interest_rate: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Outras Taxas</Label>
+                <Input
+                  value={editingAccount.other_fees || ""}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, other_fees: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingAccount(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateAccount} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Debt Payable Dialog */}
+      <Dialog open={!!editingDebtPayable} onOpenChange={(open) => !open && setEditingDebtPayable(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Dívida a Pagar
+            </DialogTitle>
+          </DialogHeader>
+          {editingDebtPayable && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Credor</Label>
+                <Input
+                  value={editingDebtPayable.creditor_name}
+                  onChange={(e) => setEditingDebtPayable({ ...editingDebtPayable, creditor_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingDebtPayable.amount || ""}
+                  onChange={(e) => setEditingDebtPayable({ ...editingDebtPayable, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data de Vencimento</Label>
+                <Input
+                  type="date"
+                  value={editingDebtPayable.due_date}
+                  onChange={(e) => setEditingDebtPayable({ ...editingDebtPayable, due_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Input
+                  value={editingDebtPayable.description || ""}
+                  onChange={(e) => setEditingDebtPayable({ ...editingDebtPayable, description: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDebtPayable(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateDebtPayable} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Debt Receivable Dialog */}
+      <Dialog open={!!editingDebtReceivable} onOpenChange={(open) => !open && setEditingDebtReceivable(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Valor a Receber
+            </DialogTitle>
+          </DialogHeader>
+          {editingDebtReceivable && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Devedor</Label>
+                <Input
+                  value={editingDebtReceivable.debtor_name}
+                  onChange={(e) => setEditingDebtReceivable({ ...editingDebtReceivable, debtor_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingDebtReceivable.amount || ""}
+                  onChange={(e) => setEditingDebtReceivable({ ...editingDebtReceivable, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data de Recebimento</Label>
+                <Input
+                  type="date"
+                  value={editingDebtReceivable.due_date}
+                  onChange={(e) => setEditingDebtReceivable({ ...editingDebtReceivable, due_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Input
+                  value={editingDebtReceivable.description || ""}
+                  onChange={(e) => setEditingDebtReceivable({ ...editingDebtReceivable, description: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDebtReceivable(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateDebtReceivable} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="banks" className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
           <TabsTrigger value="banks">Bancos e Cartões</TabsTrigger>
@@ -313,6 +596,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                       <Input
                         type="number"
                         step="0.01"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={newAccount.card_limit || ""}
                         onChange={(e) => setNewAccount({ ...newAccount, card_limit: parseFloat(e.target.value) || 0 })}
@@ -326,6 +610,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                       <Input
                         type="number"
                         step="0.01"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={newAccount.annual_fee || ""}
                         onChange={(e) => setNewAccount({ ...newAccount, annual_fee: parseFloat(e.target.value) || 0 })}
@@ -337,6 +622,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                       <Input
                         type="number"
                         step="0.01"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={newAccount.interest_rate || ""}
                         onChange={(e) => setNewAccount({ ...newAccount, interest_rate: parseFloat(e.target.value) || 0 })}
@@ -412,14 +698,24 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                                     </div>
                                   </div>
                                 </div>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleDelete("banks_accounts", account.id)}
-                                  className="h-8 w-8"
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => setEditingAccount(account)}
+                                    className="h-8 w-8"
+                                  >
+                                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleDelete("banks_accounts", account.id)}
+                                    className="h-8 w-8"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -455,6 +751,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                   <Input
                     type="number"
                     step="0.01"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={newDebtPayable.amount || ""}
                     onChange={(e) => setNewDebtPayable({ ...newDebtPayable, amount: parseFloat(e.target.value) || 0 })}
@@ -525,14 +822,24 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                                 </div>
                               )}
                             </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDelete("debts_payable", debt.id)}
-                              className="h-8 w-8"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setEditingDebtPayable(debt)}
+                                className="h-8 w-8"
+                              >
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDelete("debts_payable", debt.id)}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -566,6 +873,7 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                   <Input
                     type="number"
                     step="0.01"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={newDebtReceivable.amount || ""}
                     onChange={(e) => setNewDebtReceivable({ ...newDebtReceivable, amount: parseFloat(e.target.value) || 0 })}
@@ -636,14 +944,24 @@ export function BasicInformation({ userId }: BasicInformationProps) {
                                 </div>
                               )}
                             </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDelete("debts_receivable", debt.id)}
-                              className="h-8 w-8"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setEditingDebtReceivable(debt)}
+                                className="h-8 w-8"
+                              >
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDelete("debts_receivable", debt.id)}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

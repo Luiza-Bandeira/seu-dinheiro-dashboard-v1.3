@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Target } from "lucide-react";
+import { Plus, Trash2, Target, Pencil } from "lucide-react";
 
 interface GoalsManagerProps {
   userId: string;
@@ -29,6 +30,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
     current_value: 0,
     deadline: "",
   });
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -51,7 +53,6 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
   };
 
   const handleAddGoal = async () => {
-    // Proteção contra duplo clique
     if (loading) return;
 
     if (!newGoal.goal_name || newGoal.target_value <= 0) {
@@ -99,6 +100,44 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
     setLoading(false);
   };
 
+  const handleUpdateGoal = async () => {
+    if (!editingGoal || loading) return;
+
+    setLoading(true);
+
+    const status = editingGoal.current_value >= editingGoal.target_value ? "completed" : "in_progress";
+
+    const { error } = await supabase
+      .from("goals")
+      .update({
+        goal_name: editingGoal.goal_name,
+        target_value: editingGoal.target_value,
+        current_value: editingGoal.current_value,
+        deadline: editingGoal.deadline || null,
+        status,
+      })
+      .eq("id", editingGoal.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar meta",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Meta atualizada!",
+      description: "Sua meta financeira foi atualizada com sucesso.",
+    });
+
+    setEditingGoal(null);
+    await loadGoals();
+    setLoading(false);
+  };
+
   const handleDeleteGoal = async (id: string) => {
     const { error } = await supabase.from("goals").delete().eq("id", id);
 
@@ -141,7 +180,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
 
     if (status === "completed") {
       toast({
-        title: "🎉 Parabéns!",
+        title: "Parabéns!",
         description: "Você alcançou sua meta!",
       });
     }
@@ -151,6 +190,65 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Edit Goal Dialog */}
+      <Dialog open={!!editingGoal} onOpenChange={(open) => !open && setEditingGoal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Meta
+            </DialogTitle>
+          </DialogHeader>
+          {editingGoal && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome da Meta</Label>
+                <Input
+                  value={editingGoal.goal_name}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, goal_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor Alvo (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingGoal.target_value || ""}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, target_value: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor Atual (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingGoal.current_value || ""}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, current_value: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Prazo</Label>
+                <Input
+                  type="date"
+                  value={editingGoal.deadline || ""}
+                  onChange={(e) => setEditingGoal({ ...editingGoal, deadline: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingGoal(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateGoal} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-brand-blue">Criar Nova Meta</CardTitle>
@@ -241,14 +339,24 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
                                 </p>
                               )}
                             </div>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDeleteGoal(goal.id)}
-                              className="h-8 w-8"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setEditingGoal(goal)}
+                                className="h-8 w-8"
+                              >
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteGoal(goal.id)}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -309,7 +417,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
 
                           {isCompleted && (
                             <div className="text-center py-2 bg-green-50 rounded text-green-700 font-semibold">
-                              ✓ Meta Concluída!
+                              Meta Concluída!
                             </div>
                           )}
                         </div>

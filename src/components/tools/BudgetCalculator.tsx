@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type FinanceType = Database["public"]["Enums"]["finance_type"];
+
 interface BudgetCalculatorProps {
   userId: string;
 }
@@ -33,6 +35,7 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
     description: "",
     date: new Date().toISOString().split("T")[0],
   });
+  const [editingEntry, setEditingEntry] = useState<FinanceEntry | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,7 +58,6 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
   };
 
   const handleAddEntry = async () => {
-    // Proteção contra duplo clique
     if (loading) return;
 
     if (!newEntry.category || newEntry.value <= 0) {
@@ -105,6 +107,42 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
     setLoading(false);
   };
 
+  const handleUpdateEntry = async () => {
+    if (!editingEntry?.id || loading) return;
+
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("finances")
+      .update({
+        type: editingEntry.type as FinanceType,
+        category: editingEntry.category,
+        value: editingEntry.value,
+        description: editingEntry.description,
+        date: editingEntry.date,
+      })
+      .eq("id", editingEntry.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar entrada",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Entrada atualizada!",
+      description: "Sua entrada financeira foi atualizada com sucesso.",
+    });
+
+    setEditingEntry(null);
+    await loadEntries();
+    setLoading(false);
+  };
+
   const handleDeleteEntry = async (id: string) => {
     const { error } = await supabase.from("finances").delete().eq("id", id);
 
@@ -147,8 +185,99 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
     { name: "Despesas", value: totals.expenses, color: "#ef137c" },
   ];
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "income":
+        return "Receita";
+      case "fixed_expense":
+        return "Despesa Fixa";
+      case "variable_expense":
+        return "Despesa Variável";
+      case "receivable":
+        return "A Receber";
+      case "debt":
+        return "Dívida";
+      default:
+        return type;
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Edit Entry Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar Transação
+            </DialogTitle>
+          </DialogHeader>
+          {editingEntry && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={editingEntry.type}
+                  onValueChange={(value) => setEditingEntry({ ...editingEntry, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">Receita</SelectItem>
+                    <SelectItem value="fixed_expense">Despesa Fixa</SelectItem>
+                    <SelectItem value="variable_expense">Despesa Variável</SelectItem>
+                    <SelectItem value="receivable">A Receber</SelectItem>
+                    <SelectItem value="debt">Dívida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Input
+                  value={editingEntry.category}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, category: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={editingEntry.value || ""}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, value: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Input
+                  value={editingEntry.description || ""}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={editingEntry.date}
+                  onChange={(e) => setEditingEntry({ ...editingEntry, date: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEntry(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateEntry} disabled={loading}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-brand-blue">Adicionar Transação</CardTitle>
@@ -276,17 +405,27 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
             <h4 className="font-semibold text-sm text-brand-blue">Entradas Recentes</h4>
-            {entries.slice(0, 5).map((entry) => (
+            {entries.slice(0, 10).map((entry) => (
               <div
                 key={entry.id}
                 className="flex items-center justify-between p-2 rounded border border-border"
               >
                 <div className="flex-1">
                   <p className="font-medium text-sm">{entry.category}</p>
-                  <p className="text-xs text-muted-foreground">{entry.date}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getTypeLabel(entry.type)} • {entry.date}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">R$ {Number(entry.value).toFixed(2)}</p>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setEditingEntry(entry)}
+                    className="h-8 w-8"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                   <Button
                     size="icon"
                     variant="ghost"

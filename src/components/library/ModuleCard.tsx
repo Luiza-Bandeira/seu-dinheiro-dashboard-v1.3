@@ -62,8 +62,8 @@ export function ModuleCard({ module, userId, index }: ModuleCardProps) {
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <div className="flex items-start justify-between">
-            <Badge variant="secondary" className="mb-2">
-              Módulo {module.order_index + 1}
+          <Badge variant="secondary" className="mb-2">
+              Módulo {module.order_index}
             </Badge>
             {progress === 100 && (
               <Badge className="bg-green-600">Completo</Badge>

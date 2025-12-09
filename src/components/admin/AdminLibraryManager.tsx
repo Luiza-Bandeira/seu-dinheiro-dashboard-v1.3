@@ -497,15 +497,16 @@ export function AdminLibraryManager() {
 
       {/* Module Dialog with Contents */}
       <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{editingModule ? "Editar Módulo" : "Novo Módulo"}</DialogTitle>
             <DialogDescription>
               {editingModule ? "Atualize as informações do módulo e seus conteúdos" : "Crie um novo módulo com vídeos, PDFs e outros recursos"}
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+          <div className="flex-1 overflow-hidden min-h-0">
+            <ScrollArea className="h-full max-h-[calc(90vh-180px)] pr-4">
             <div className="space-y-6">
               {/* Module Info */}
               <div className="space-y-4">
@@ -681,9 +682,10 @@ export function AdminLibraryManager() {
                 </AnimatePresence>
               </div>
             </div>
-          </ScrollArea>
+            </ScrollArea>
+          </div>
 
-          <DialogFooter className="mt-4 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 mt-4 pt-4 border-t">
             <Button variant="outline" onClick={() => setModuleDialogOpen(false)} disabled={saving}>
               Cancelar
             </Button>

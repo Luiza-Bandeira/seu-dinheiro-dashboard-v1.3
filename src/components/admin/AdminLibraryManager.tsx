@@ -505,7 +505,7 @@ export function AdminLibraryManager() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 max-h-[60vh] pr-4">
             <div className="space-y-6">
               {/* Module Info */}
               <div className="space-y-4">

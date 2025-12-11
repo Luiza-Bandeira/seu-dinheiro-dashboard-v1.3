@@ -66,7 +66,7 @@ const Index = () => {
     { title: "3 Sessões individuais", subtitle: "(R$ 500 cada)", price: "R$ 1.500" },
     { title: "Encontros ao vivo durante o programa", subtitle: "Para tirar dúvidas com exemplos reais", price: "R$ 997" },
     { title: "Suporte via WhatsApp por 1 ano", subtitle: "Acompanhamento contínuo", price: "R$ 1.200" },
-    { title: "Ferramentas e materiais exclusivos", subtitle: "Planilhas, templates e guias práticos", price: "R$ 1,200" },
+    { title: "Ferramentas e materiais exclusivos", subtitle: "Planilhas, templates e guias práticos", price: "R$ 1.200" },
     { title: "Aulas gravadas + conteúdo periódico", subtitle: "Acesso completo durante o programa", price: "R$ 997" },
   ];
 

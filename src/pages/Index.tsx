@@ -85,7 +85,7 @@ const Index = () => {
   }, {
     title: "Ferramentas e materiais exclusivos",
     subtitle: "Planilhas, templates e guias práticos",
-    price: "R$ 1,200"
+    price: "R$ 1.200"
   }, {
     title: "Aulas gravadas + conteúdo periódico",
     subtitle: "Acesso completo durante o programa",

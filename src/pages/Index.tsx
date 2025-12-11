@@ -85,7 +85,7 @@ const Index = () => {
   }, {
     title: "Ferramentas e materiais exclusivos",
     subtitle: "Planilhas, templates e guias práticos",
-    price: "R$ 1.200"
+    price: "R$ 1,200"
   }, {
     title: "Aulas gravadas + conteúdo periódico",
     subtitle: "Acesso completo durante o programa",
@@ -93,7 +93,33 @@ const Index = () => {
   }];
   return <div className="min-h-screen bg-background overflow-x-hidden">
       {/* SEÇÃO 1 — HERO */}
-      
+      <section className="relative min-h-screen flex items-center justify-center px-6 py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-pink/10 to-transparent" />
+        <motion.div initial={{
+        opacity: 0,
+        y: 40
+      }} animate={{
+        opacity: 1,
+        y: 0
+      }} transition={{
+        duration: 0.8
+      }} className="relative z-10 text-center max-w-4xl mx-auto space-y-8">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-brand-blue leading-tight">
+            Seu Dinheiro na Mesa
+          </h1>
+          <p className="text-xl md:text-2xl text-brand-blue/80 font-medium">
+            Porque entender seu dinheiro muda tudo.
+          </p>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Clareza financeira real, simples e possível — pra você finalmente saber o que está fazendo com o seu dinheiro.
+          </p>
+          <div className="flex flex-col gap-4 justify-center items-center pt-4">
+            <Button size="lg" onClick={() => window.open(paymentLink, "_blank")} className="px-8 py-7 text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all">
+              👉 Quero colocar meu dinheiro na mesa
+            </Button>
+          </div>
+        </motion.div>
+      </section>
 
       {/* SEÇÃO 2 — IDENTIFICAÇÃO (Dores) */}
       <section className="py-20 px-6 bg-brand-pink/10">

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingUp, ArrowDownCircle } from "lucide-react";
+import { Plus, Trash2, TrendingUp, ArrowDownCircle, History } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface CurrentInvestmentsProps {
   userId: string;
@@ -26,8 +29,17 @@ interface Investment {
   estimated_rate: number;
 }
 
+interface Withdrawal {
+  id: string;
+  investment_name: string;
+  amount: number;
+  withdrawn_at: string;
+  notes: string | null;
+}
+
 export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [newInvestment, setNewInvestment] = useState({
     name: "",
     current_value: 0,
@@ -35,11 +47,14 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   });
   const [loading, setLoading] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [withdrawNotes, setWithdrawNotes] = useState("");
 
   useEffect(() => {
     loadInvestments();
+    loadWithdrawals();
   }, [userId]);
 
   const loadInvestments = async () => {
@@ -55,6 +70,21 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     }
 
     setInvestments(data || []);
+  };
+
+  const loadWithdrawals = async () => {
+    const { data, error } = await supabase
+      .from("investment_withdrawals")
+      .select("*")
+      .eq("user_id", userId)
+      .order("withdrawn_at", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar resgates:", error);
+      return;
+    }
+
+    setWithdrawals(data || []);
   };
 
   const handleAddInvestment = async () => {
@@ -124,6 +154,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   const openWithdrawDialog = (investment: Investment) => {
     setSelectedInvestment(investment);
     setWithdrawAmount(0);
+    setWithdrawNotes("");
     setWithdrawDialogOpen(true);
   };
 
@@ -149,6 +180,24 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     }
 
     setLoading(true);
+
+    // Registrar o resgate no histórico
+    const { error: withdrawalError } = await supabase.from("investment_withdrawals").insert({
+      user_id: userId,
+      investment_name: selectedInvestment.name,
+      amount: withdrawAmount,
+      notes: withdrawNotes || null,
+    });
+
+    if (withdrawalError) {
+      toast({
+        title: "Erro ao registrar resgate",
+        description: withdrawalError.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const newValue = selectedInvestment.current_value - withdrawAmount;
 
@@ -199,7 +248,9 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     setWithdrawDialogOpen(false);
     setSelectedInvestment(null);
     setWithdrawAmount(0);
+    setWithdrawNotes("");
     await loadInvestments();
+    await loadWithdrawals();
     setLoading(false);
   };
 
@@ -207,6 +258,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   const avgRate = investments.length > 0
     ? investments.reduce((sum, inv) => sum + Number(inv.estimated_rate), 0) / investments.length
     : 0;
+  const totalWithdrawn = withdrawals.reduce((sum, w) => sum + Number(w.amount), 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -260,8 +312,18 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-brand-blue">Meus Investimentos Atuais</CardTitle>
-          <CardDescription>Visão geral do seu portfólio</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-brand-blue">Meus Investimentos Atuais</CardTitle>
+              <CardDescription>Visão geral do seu portfólio</CardDescription>
+            </div>
+            {withdrawals.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setHistoryDialogOpen(true)}>
+                <History className="mr-2 h-4 w-4" />
+                Histórico
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {investments.length === 0 ? (
@@ -285,6 +347,15 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                   </p>
                 </div>
               </div>
+
+              {totalWithdrawn > 0 && (
+                <div className="text-center p-3 rounded-lg bg-amber-100/50 dark:bg-amber-900/20">
+                  <p className="text-sm text-muted-foreground mb-1">Total Resgatado</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    R$ {totalWithdrawn.toFixed(2)}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 {investments.map((investment) => (
@@ -360,6 +431,15 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Observações (opcional)</Label>
+              <Input
+                placeholder="Ex: Resgate para emergência"
+                value={withdrawNotes}
+                onChange={(e) => setWithdrawNotes(e.target.value)}
+              />
+            </div>
+
             {selectedInvestment && withdrawAmount > 0 && (
               <div className="p-3 rounded-lg bg-muted text-sm">
                 {withdrawAmount >= selectedInvestment.current_value ? (
@@ -381,6 +461,51 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
             </Button>
             <Button onClick={handleWithdraw} disabled={loading}>
               Confirmar Resgate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Histórico */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-brand-blue">Histórico de Resgates</DialogTitle>
+            <DialogDescription>
+              Total resgatado: <strong>R$ {totalWithdrawn.toFixed(2)}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-3">
+              {withdrawals.map((withdrawal) => (
+                <Card key={withdrawal.id} className="border-border">
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-brand-blue">{withdrawal.investment_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(withdrawal.withdrawn_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        {withdrawal.notes && (
+                          <p className="text-sm text-muted-foreground mt-1 italic">
+                            "{withdrawal.notes}"
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-lg font-bold text-amber-600">
+                        R$ {Number(withdrawal.amount).toFixed(2)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentContent } from "@/components/dashboard/RecentContent";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 
@@ -77,9 +78,10 @@ export default function Dashboard() {
 
             <DashboardStats userId={user?.id || ""} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <RecentContent userId={user?.id || ""} />
               <FinancialSummary userId={user?.id || ""} />
+              <ExpensesByCategory userId={user?.id || ""} />
             </div>
           </div>
         </motion.div>

@@ -377,41 +377,56 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          data_fim_vigencia: string | null
+          data_inicio: string | null
           email: string
           full_name: string | null
           id: string
           is_admin: boolean | null
+          last_login_at: string | null
           mercado_pago_payment_id: string | null
           payment_status: string | null
           phone: string | null
+          produto_adquirido: string | null
           profession: string | null
           updated_at: string | null
+          valor_pago: number | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          data_fim_vigencia?: string | null
+          data_inicio?: string | null
           email: string
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          last_login_at?: string | null
           mercado_pago_payment_id?: string | null
           payment_status?: string | null
           phone?: string | null
+          produto_adquirido?: string | null
           profession?: string | null
           updated_at?: string | null
+          valor_pago?: number | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          data_fim_vigencia?: string | null
+          data_inicio?: string | null
           email?: string
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          last_login_at?: string | null
           mercado_pago_payment_id?: string | null
           payment_status?: string | null
           phone?: string | null
+          produto_adquirido?: string | null
           profession?: string | null
           updated_at?: string | null
+          valor_pago?: number | null
         }
         Relationships: []
       }
@@ -559,7 +574,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "aluno"
       content_type: "video" | "pdf" | "exercise" | "checklist" | "extra"
       finance_type:
         | "income"
@@ -694,7 +709,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "aluno"],
       content_type: ["video", "pdf", "exercise", "checklist", "extra"],
       finance_type: [
         "income",

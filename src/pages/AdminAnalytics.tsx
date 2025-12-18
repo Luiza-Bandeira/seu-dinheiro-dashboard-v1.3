@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen } from "lucide-react";
+import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus } from "lucide-react";
 import { exportToPDF, exportToCSV, exportToXLSX, formatCurrency, formatPercentage } from "@/utils/exportUtils";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminLibraryManager } from "@/components/admin/AdminLibraryManager";
+import { AdminUserManager } from "@/components/admin/AdminUserManager";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/components/ui/use-toast";
@@ -26,6 +27,11 @@ interface Profile {
   full_name: string | null;
   payment_status: string | null;
   created_at: string | null;
+  last_login_at?: string | null;
+  produto_adquirido?: string | null;
+  data_inicio?: string | null;
+  data_fim_vigencia?: string | null;
+  valor_pago?: number | null;
 }
 
 interface ProgressEntry {
@@ -98,7 +104,7 @@ export default function AdminAnalytics() {
 
   const loadAllData = async () => {
     const [profilesRes, progressRes, analyticsRes, contentsRes, modulesRes] = await Promise.all([
-      supabase.from("profiles").select("id, email, full_name, payment_status, created_at"),
+      supabase.from("profiles").select("id, email, full_name, payment_status, created_at, last_login_at, produto_adquirido, data_inicio, data_fim_vigencia, valor_pago"),
       supabase.from("progress").select("user_id, completed"),
       supabase.from("analytics_access").select("user_id, session_time, accessed_at"),
       supabase.from("contents").select("id"),
@@ -188,9 +194,15 @@ export default function AdminAnalytics() {
       const progressPercentage = contents.length > 0 ? (userProgress / contents.length) * 100 : 0;
 
       const userAnalytics = analytics.filter(a => a.user_id === profile.id);
-      const lastAccess = userAnalytics.length > 0 
-        ? new Date(Math.max(...userAnalytics.map(a => new Date(a.accessed_at).getTime())))
-        : null;
+      
+      // Prioritize last_login_at from profile, fallback to analytics
+      let lastAccess: Date | null = null;
+      if (profile.last_login_at) {
+        lastAccess = new Date(profile.last_login_at);
+      } else if (userAnalytics.length > 0) {
+        lastAccess = new Date(Math.max(...userAnalytics.map(a => new Date(a.accessed_at).getTime())));
+      }
+      
       const totalSessions = userAnalytics.length;
       const avgSessionTime = totalSessions > 0 
         ? userAnalytics.reduce((sum, a) => sum + (a.session_time || 0), 0) / totalSessions 
@@ -461,8 +473,12 @@ export default function AdminAnalytics() {
           </div>
 
           {/* Tabs for different views */}
-          <Tabs defaultValue="engagement" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+              <TabsTrigger value="users" className="flex items-center gap-1">
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Usuários</span>
+              </TabsTrigger>
               <TabsTrigger value="engagement">Engajamento</TabsTrigger>
               <TabsTrigger value="risk">Em Risco ({atRiskStudents.length})</TabsTrigger>
               <TabsTrigger value="top">Destaque ({topPerformers.length})</TabsTrigger>
@@ -669,6 +685,10 @@ export default function AdminAnalytics() {
 
             <TabsContent value="library" className="mt-6">
               <AdminLibraryManager />
+            </TabsContent>
+
+            <TabsContent value="users" className="mt-6">
+              <AdminUserManager profiles={profiles} onRefresh={loadAllData} />
             </TabsContent>
           </Tabs>
         </motion.div>

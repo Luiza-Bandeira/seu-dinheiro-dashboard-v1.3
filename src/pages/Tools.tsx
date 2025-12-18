@@ -79,12 +79,11 @@ export default function Tools() {
             </div>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-6 gap-1 lg:gap-2">
+              <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-5 gap-1 lg:gap-2">
                 <TabsTrigger value="basic" className="whitespace-nowrap">Informações Básicas</TabsTrigger>
                 <TabsTrigger value="current-investments" className="whitespace-nowrap">Investimentos</TabsTrigger>
                 <TabsTrigger value="budget" className="whitespace-nowrap">Orçamento</TabsTrigger>
                 <TabsTrigger value="goals" className="whitespace-nowrap">Objetivos</TabsTrigger>
-                <TabsTrigger value="investment" className="whitespace-nowrap">Simulação de Aportes</TabsTrigger>
                 <TabsTrigger value="reduction" className="whitespace-nowrap">Redução Semanal</TabsTrigger>
               </TabsList>
 
@@ -102,10 +101,9 @@ export default function Tools() {
 
               <TabsContent value="goals" className="mt-6">
                 <GoalsManager userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="investment" className="mt-6">
-                <InvestmentSimulator userId={user?.id || ""} />
+                <div className="mt-8">
+                  <InvestmentSimulator userId={user?.id || ""} />
+                </div>
               </TabsContent>
 
               <TabsContent value="reduction" className="mt-6">

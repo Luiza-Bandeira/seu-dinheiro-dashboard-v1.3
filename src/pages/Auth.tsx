@@ -57,6 +57,15 @@ export default function Auth() {
           return;
         }
 
+        // Update last_login_at on successful login
+        const { data: { user: loggedInUser } } = await supabase.auth.getUser();
+        if (loggedInUser) {
+          await supabase
+            .from('profiles')
+            .update({ last_login_at: new Date().toISOString() })
+            .eq('id', loggedInUser.id);
+        }
+
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",

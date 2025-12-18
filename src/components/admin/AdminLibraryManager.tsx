@@ -497,7 +497,7 @@ export function AdminLibraryManager() {
 
       {/* Module Dialog with Contents */}
       <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-2xl h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>{editingModule ? "Editar Módulo" : "Novo Módulo"}</DialogTitle>
             <DialogDescription>
@@ -505,8 +505,8 @@ export function AdminLibraryManager() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden min-h-0">
-            <ScrollArea className="h-full max-h-[calc(90vh-180px)] pr-4">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full pr-4">
             <div className="space-y-6">
               {/* Module Info */}
               <div className="space-y-4">

@@ -5,7 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingUp } from "lucide-react";
+import { Plus, Trash2, TrendingUp, ArrowDownCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface CurrentInvestmentsProps {
   userId: string;
@@ -26,6 +34,9 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     estimated_rate: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
 
   useEffect(() => {
     loadInvestments();
@@ -108,6 +119,88 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     });
 
     await loadInvestments();
+  };
+
+  const openWithdrawDialog = (investment: Investment) => {
+    setSelectedInvestment(investment);
+    setWithdrawAmount(0);
+    setWithdrawDialogOpen(true);
+  };
+
+  const handleWithdraw = async () => {
+    if (!selectedInvestment) return;
+
+    if (withdrawAmount <= 0) {
+      toast({
+        title: "Erro",
+        description: "Informe um valor válido para o resgate",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (withdrawAmount > selectedInvestment.current_value) {
+      toast({
+        title: "Erro",
+        description: "O valor do resgate não pode ser maior que o valor investido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const newValue = selectedInvestment.current_value - withdrawAmount;
+
+    if (newValue <= 0) {
+      // Se o resgate for total, deletar o investimento
+      const { error } = await supabase
+        .from("investments_current")
+        .delete()
+        .eq("id", selectedInvestment.id);
+
+      if (error) {
+        toast({
+          title: "Erro ao processar resgate",
+          description: error.message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      toast({
+        title: "Resgate total realizado!",
+        description: `Você resgatou R$ ${withdrawAmount.toFixed(2)} de ${selectedInvestment.name}. O investimento foi encerrado.`,
+      });
+    } else {
+      // Resgate parcial: atualizar o valor
+      const { error } = await supabase
+        .from("investments_current")
+        .update({ current_value: newValue })
+        .eq("id", selectedInvestment.id);
+
+      if (error) {
+        toast({
+          title: "Erro ao processar resgate",
+          description: error.message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      toast({
+        title: "Resgate realizado!",
+        description: `Você resgatou R$ ${withdrawAmount.toFixed(2)} de ${selectedInvestment.name}. Novo saldo: R$ ${newValue.toFixed(2)}`,
+      });
+    }
+
+    setWithdrawDialogOpen(false);
+    setSelectedInvestment(null);
+    setWithdrawAmount(0);
+    await loadInvestments();
+    setLoading(false);
   };
 
   const totalInvested = investments.reduce((sum, inv) => sum + Number(inv.current_value), 0);
@@ -209,14 +302,26 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(investment.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openWithdrawDialog(investment)}
+                            className="h-8 w-8"
+                            title="Resgatar"
+                          >
+                            <ArrowDownCircle className="h-4 w-4 text-amber-600" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(investment.id)}
+                            className="h-8 w-8"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -226,6 +331,60 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Resgate */}
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-brand-blue">Resgatar Investimento</DialogTitle>
+            <DialogDescription>
+              {selectedInvestment && (
+                <>
+                  Informe o valor que deseja resgatar de <strong>{selectedInvestment.name}</strong>.
+                  <br />
+                  Saldo disponível: <strong>R$ {Number(selectedInvestment.current_value).toFixed(2)}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Valor do Resgate (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={withdrawAmount || ""}
+                onChange={(e) => setWithdrawAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            {selectedInvestment && withdrawAmount > 0 && (
+              <div className="p-3 rounded-lg bg-muted text-sm">
+                {withdrawAmount >= selectedInvestment.current_value ? (
+                  <p className="text-amber-600">
+                    ⚠️ Resgate total - o investimento será encerrado
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Novo saldo após resgate: <strong>R$ {(selectedInvestment.current_value - withdrawAmount).toFixed(2)}</strong>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleWithdraw} disabled={loading}>
+              Confirmar Resgate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

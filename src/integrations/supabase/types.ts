@@ -265,6 +265,33 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_withdrawals: {
+        Row: {
+          amount: number
+          id: string
+          investment_name: string
+          notes: string | null
+          user_id: string
+          withdrawn_at: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          investment_name: string
+          notes?: string | null
+          user_id: string
+          withdrawn_at?: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          investment_name?: string
+          notes?: string | null
+          user_id?: string
+          withdrawn_at?: string
+        }
+        Relationships: []
+      }
       investments_current: {
         Row: {
           created_at: string

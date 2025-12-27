@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye, Copy, CheckCircle, Link, RefreshCw, Loader2 } from "lucide-react";
+import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye, Trash2, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { motion } from "framer-motion";
 import { z } from "zod";
 
 interface Profile {
@@ -36,6 +36,7 @@ interface AdminUserManagerProps {
 const createUserSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
   fullName: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }).max(100),
+  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
 });
 
 const commercialSchema = z.object({
@@ -49,17 +50,17 @@ const commercialSchema = z.object({
 export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [recoveryLink, setRecoveryLink] = useState("");
-  const [createdUserName, setCreatedUserName] = useState("");
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Create user form
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
 
   // Commercial data form
   const [produtoAdquirido, setProdutoAdquirido] = useState("");
@@ -67,11 +68,7 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
   const [dataFimVigencia, setDataFimVigencia] = useState("");
   const [valorPago, setValorPago] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
-  
-  // Recovery link for existing user
-  const [detailRecoveryLink, setDetailRecoveryLink] = useState("");
-  const [detailLinkCopied, setDetailLinkCopied] = useState(false);
-  const [generatingLink, setGeneratingLink] = useState(false);
+
   const handleCreateUser = async () => {
     setErrors({});
 
@@ -79,6 +76,7 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
       const validatedData = createUserSchema.parse({
         email: newUserEmail.trim(),
         fullName: newUserName.trim(),
+        password: newUserPassword,
       });
 
       setSaving(true);
@@ -89,10 +87,12 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         return;
       }
 
-      const response = await supabase.functions.invoke('create-user', {
+      const response = await supabase.functions.invoke('manage-user', {
         body: {
+          action: 'create',
           email: validatedData.email,
           fullName: validatedData.fullName,
+          password: validatedData.password,
         },
       });
 
@@ -104,19 +104,14 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         throw new Error(response.data.error);
       }
 
-      // Show the recovery link to the admin
-      setCreatedUserName(validatedData.fullName);
-      setRecoveryLink(response.data.recoveryLink || "");
-      setLinkCopied(false);
-      setLinkDialogOpen(true);
-
       toast({
         title: "Usuário criado com sucesso!",
-        description: "Copie o link de acesso e envie ao aluno.",
+        description: `O aluno pode fazer login com email e senha definidos.`,
       });
 
       setNewUserEmail("");
       setNewUserName("");
+      setNewUserPassword("");
       setCreateDialogOpen(false);
       onRefresh();
 
@@ -137,34 +132,15 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
     }
   };
 
-  const openUserDetail = (user: Profile) => {
-    setSelectedUser(user);
-    setProdutoAdquirido(user.produto_adquirido || "");
-    setDataInicio(user.data_inicio || "");
-    setDataFimVigencia(user.data_fim_vigencia || "");
-    setValorPago(user.valor_pago?.toString() || "");
-    setPaymentStatus(user.payment_status || "pending");
-    setDetailRecoveryLink("");
-    setDetailLinkCopied(false);
-    setDetailDialogOpen(true);
-  };
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
-  const handleGenerateRecoveryLink = async () => {
-    if (!selectedUser) return;
-    
-    setGeneratingLink(true);
+    setDeleting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
-        return;
-      }
-
-      const response = await supabase.functions.invoke('create-user', {
+      const response = await supabase.functions.invoke('manage-user', {
         body: {
-          email: selectedUser.email,
-          fullName: selectedUser.full_name || "",
-          generateLinkOnly: true,
+          action: 'delete',
+          userId: userToDelete.id,
         },
       });
 
@@ -176,17 +152,37 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         throw new Error(response.data.error);
       }
 
-      setDetailRecoveryLink(response.data.recoveryLink || "");
-      setDetailLinkCopied(false);
-      toast({ title: "Link gerado com sucesso!" });
+      toast({
+        title: "Usuário deletado",
+        description: `${userToDelete.full_name || userToDelete.email} foi removido.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      onRefresh();
 
     } catch (error) {
       if (error instanceof Error) {
         toast({ title: "Erro", description: error.message, variant: "destructive" });
       }
     } finally {
-      setGeneratingLink(false);
+      setDeleting(false);
     }
+  };
+
+  const openUserDetail = (user: Profile) => {
+    setSelectedUser(user);
+    setProdutoAdquirido(user.produto_adquirido || "");
+    setDataInicio(user.data_inicio || "");
+    setDataFimVigencia(user.data_fim_vigencia || "");
+    setValorPago(user.valor_pago?.toString() || "");
+    setPaymentStatus(user.payment_status || "pending");
+    setDetailDialogOpen(true);
+  };
+
+  const openDeleteDialog = (user: Profile) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
   };
 
   const handleSaveCommercialData = async () => {
@@ -252,7 +248,6 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
   };
 
   const getLastAccessInfo = (user: Profile) => {
-    // Priorize last_login_at over created_at
     const lastAccess = user.last_login_at;
     if (!lastAccess) {
       return { text: "Nunca acessou", isOnline: false };
@@ -262,7 +257,6 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60));
 
-    // Consider online if accessed in last 15 minutes
     const isOnline = diffMinutes < 15;
 
     return {
@@ -336,14 +330,23 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openUserDetail(user)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Detalhes
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openUserDetail(user)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => openDeleteDialog(user)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -363,7 +366,7 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
               Cadastrar Novo Aluno
             </DialogTitle>
             <DialogDescription>
-              O aluno receberá um email para definir sua senha.
+              Defina email, nome e senha do novo aluno.
             </DialogDescription>
           </DialogHeader>
 
@@ -395,9 +398,23 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="newUserPassword">Senha *</Label>
+              <Input
+                id="newUserPassword"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+
             <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-              <p>• O aluno será criado com perfil "Aluno"</p>
-              <p>• Um link de recuperação de senha será gerado</p>
+              <p>• O aluno poderá fazer login imediatamente</p>
+              <p>• A senha definida aqui é temporária - oriente o aluno a alterá-la</p>
             </div>
           </div>
 
@@ -464,77 +481,6 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
                     </Select>
                   </div>
                 </div>
-              </div>
-
-              <Separator />
-
-              {/* Recovery Link Section */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                  <Link className="h-4 w-4" />
-                  Link de Acesso
-                </h4>
-                
-                {detailRecoveryLink ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input
-                        value={detailRecoveryLink}
-                        readOnly
-                        className="flex-1 text-xs font-mono bg-muted"
-                      />
-                      <Button
-                        size="sm"
-                        variant={detailLinkCopied ? "secondary" : "default"}
-                        className={detailLinkCopied ? "bg-green-500 hover:bg-green-500" : "bg-brand-magenta hover:bg-brand-magenta/90"}
-                        onClick={() => {
-                          navigator.clipboard.writeText(detailRecoveryLink);
-                          setDetailLinkCopied(true);
-                          toast({ title: "Link copiado!" });
-                        }}
-                      >
-                        {detailLinkCopied ? (
-                          <>
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Copiado
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4 mr-1" />
-                            Copiar
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      O link expira em 24 horas. Envie por canal seguro.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerateRecoveryLink}
-                      disabled={generatingLink}
-                    >
-                      {generatingLink ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Gerando...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Gerar Link de Acesso
-                        </>
-                      )}
-                    </Button>
-                    <span className="text-xs text-muted-foreground">
-                      Use para enviar ao aluno definir/redefinir senha
-                    </span>
-                  </div>
-                )}
               </div>
 
               <Separator />
@@ -620,72 +566,36 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         </DialogContent>
       </Dialog>
 
-      {/* Recovery Link Dialog */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
-              Aluno Criado com Sucesso!
-            </DialogTitle>
-            <DialogDescription>
-              Copie o link abaixo e envie para <strong>{createdUserName}</strong> definir a senha de acesso.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Link className="h-4 w-4" />
-                Link de Acesso
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  value={recoveryLink}
-                  readOnly
-                  className="flex-1 text-sm font-mono bg-muted"
-                />
-                <Button
-                  variant={linkCopied ? "secondary" : "default"}
-                  className={linkCopied ? "bg-green-500 hover:bg-green-500" : "bg-brand-magenta hover:bg-brand-magenta/90"}
-                  onClick={() => {
-                    navigator.clipboard.writeText(recoveryLink);
-                    setLinkCopied(true);
-                    toast({ title: "Link copiado!" });
-                  }}
-                >
-                  {linkCopied ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Copiado
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copiar
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <p className="font-semibold">⚠️ Importante:</p>
-              <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>Este link é único e expira em 24 horas</li>
-                <li>Envie por um canal seguro (ex: WhatsApp direto)</li>
-                <li>O aluno definirá sua própria senha ao acessar</li>
-              </ul>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={() => setLinkDialogOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar o usuário <strong>{userToDelete?.full_name || userToDelete?.email}</strong>?
+              <br /><br />
+              Esta ação é irreversível e removerá todos os dados do usuário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deletando...
+                </>
+              ) : (
+                "Deletar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

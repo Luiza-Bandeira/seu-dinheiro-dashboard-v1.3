@@ -77,6 +77,21 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Build redirect URL to our reset password page (preview/prod aware)
+    const originHeader = req.headers.get('origin')
+    const refererHeader = req.headers.get('referer')
+
+    let appOrigin: string | null = originHeader
+    if (!appOrigin && refererHeader) {
+      try {
+        appOrigin = new URL(refererHeader).origin
+      } catch {
+        appOrigin = null
+      }
+    }
+
+    const redirectTo = appOrigin ? `${appOrigin}/reset-password` : undefined
+
     // If generateLinkOnly is true, just generate a recovery link for existing user
     if (generateLinkOnly) {
       console.log('Generating recovery link for existing user:', email)
@@ -84,6 +99,7 @@ Deno.serve(async (req) => {
       const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
+        options: { redirectTo },
       })
 
       if (resetError) {
@@ -160,6 +176,7 @@ Deno.serve(async (req) => {
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
+      options: { redirectTo },
     })
 
     if (resetError) {

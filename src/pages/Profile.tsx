@@ -110,12 +110,11 @@ export default function Profile() {
     setUploading(true);
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(filePath, file);
+      .upload(fileName, file, { upsert: true });
 
     if (uploadError) {
       toast({
@@ -129,7 +128,7 @@ export default function Profile() {
 
     const { data: { publicUrl } } = supabase.storage
       .from("avatars")
-      .getPublicUrl(filePath);
+      .getPublicUrl(fileName);
 
     setAvatarUrl(publicUrl);
     setUploading(false);

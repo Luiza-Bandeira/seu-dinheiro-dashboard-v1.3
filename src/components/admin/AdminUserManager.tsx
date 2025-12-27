@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye } from "lucide-react";
+import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye, Copy, CheckCircle, Link } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -47,6 +47,10 @@ const commercialSchema = z.object({
 export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [recoveryLink, setRecoveryLink] = useState("");
+  const [createdUserName, setCreatedUserName] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,9 +97,15 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         throw new Error(response.data.error);
       }
 
+      // Show the recovery link to the admin
+      setCreatedUserName(validatedData.fullName);
+      setRecoveryLink(response.data.recoveryLink || "");
+      setLinkCopied(false);
+      setLinkDialogOpen(true);
+
       toast({
         title: "Usuário criado com sucesso!",
-        description: response.data.message || "O aluno foi cadastrado.",
+        description: "Copie o link de acesso e envie ao aluno.",
       });
 
       setNewUserEmail("");
@@ -472,6 +482,73 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
               disabled={saving}
             >
               {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recovery Link Dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+              Aluno Criado com Sucesso!
+            </DialogTitle>
+            <DialogDescription>
+              Copie o link abaixo e envie para <strong>{createdUserName}</strong> definir a senha de acesso.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Link className="h-4 w-4" />
+                Link de Acesso
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={recoveryLink}
+                  readOnly
+                  className="flex-1 text-sm font-mono bg-muted"
+                />
+                <Button
+                  variant={linkCopied ? "secondary" : "default"}
+                  className={linkCopied ? "bg-green-500 hover:bg-green-500" : "bg-brand-magenta hover:bg-brand-magenta/90"}
+                  onClick={() => {
+                    navigator.clipboard.writeText(recoveryLink);
+                    setLinkCopied(true);
+                    toast({ title: "Link copiado!" });
+                  }}
+                >
+                  {linkCopied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copiar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <p className="font-semibold">⚠️ Importante:</p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>Este link é único e expira em 24 horas</li>
+                <li>Envie por um canal seguro (ex: WhatsApp direto)</li>
+                <li>O aluno definirá sua própria senha ao acessar</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setLinkDialogOpen(false)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

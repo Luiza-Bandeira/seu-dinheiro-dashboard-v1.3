@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye, Copy, CheckCircle, Link } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, Users, Edit2, Calendar, DollarSign, Package, Eye, Copy, CheckCircle, Link, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -42,6 +43,7 @@ const commercialSchema = z.object({
   data_inicio: z.string().optional(),
   data_fim_vigencia: z.string().optional(),
   valor_pago: z.number().min(0).optional(),
+  payment_status: z.string().optional(),
 });
 
 export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps) {
@@ -64,7 +66,12 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
   const [dataInicio, setDataInicio] = useState("");
   const [dataFimVigencia, setDataFimVigencia] = useState("");
   const [valorPago, setValorPago] = useState("");
-
+  const [paymentStatus, setPaymentStatus] = useState("");
+  
+  // Recovery link for existing user
+  const [detailRecoveryLink, setDetailRecoveryLink] = useState("");
+  const [detailLinkCopied, setDetailLinkCopied] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
   const handleCreateUser = async () => {
     setErrors({});
 
@@ -136,7 +143,50 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
     setDataInicio(user.data_inicio || "");
     setDataFimVigencia(user.data_fim_vigencia || "");
     setValorPago(user.valor_pago?.toString() || "");
+    setPaymentStatus(user.payment_status || "pending");
+    setDetailRecoveryLink("");
+    setDetailLinkCopied(false);
     setDetailDialogOpen(true);
+  };
+
+  const handleGenerateRecoveryLink = async () => {
+    if (!selectedUser) return;
+    
+    setGeneratingLink(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Erro", description: "Sessão expirada", variant: "destructive" });
+        return;
+      }
+
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          email: selectedUser.email,
+          fullName: selectedUser.full_name || "",
+          generateLinkOnly: true,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+
+      setDetailRecoveryLink(response.data.recoveryLink || "");
+      setDetailLinkCopied(false);
+      toast({ title: "Link gerado com sucesso!" });
+
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      }
+    } finally {
+      setGeneratingLink(false);
+    }
   };
 
   const handleSaveCommercialData = async () => {
@@ -148,6 +198,7 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
         data_inicio: dataInicio || undefined,
         data_fim_vigencia: dataFimVigencia || undefined,
         valor_pago: valorPago ? parseFloat(valorPago) : undefined,
+        payment_status: paymentStatus || undefined,
       });
 
       setSaving(true);
@@ -159,12 +210,13 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
           data_inicio: validatedData.data_inicio || null,
           data_fim_vigencia: validatedData.data_fim_vigencia || null,
           valor_pago: validatedData.valor_pago || null,
+          payment_status: validatedData.payment_status || null,
         })
         .eq('id', selectedUser.id);
 
       if (error) throw error;
 
-      toast({ title: "Dados comerciais salvos!" });
+      toast({ title: "Dados salvos com sucesso!" });
       setDetailDialogOpen(false);
       onRefresh();
 
@@ -397,11 +449,92 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
                     <span className="text-muted-foreground">Último Acesso:</span>
                     <p className="font-medium">{formatDateTime(selectedUser?.last_login_at)}</p>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Status Pagamento:</span>
-                    <p className="font-medium capitalize">{selectedUser?.payment_status || "Pendente"}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentStatus">Status Pagamento</Label>
+                    <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="approved">Aprovado</SelectItem>
+                        <SelectItem value="cancelled">Cancelado</SelectItem>
+                        <SelectItem value="expired">Expirado</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Recovery Link Section */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <Link className="h-4 w-4" />
+                  Link de Acesso
+                </h4>
+                
+                {detailRecoveryLink ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        value={detailRecoveryLink}
+                        readOnly
+                        className="flex-1 text-xs font-mono bg-muted"
+                      />
+                      <Button
+                        size="sm"
+                        variant={detailLinkCopied ? "secondary" : "default"}
+                        className={detailLinkCopied ? "bg-green-500 hover:bg-green-500" : "bg-brand-magenta hover:bg-brand-magenta/90"}
+                        onClick={() => {
+                          navigator.clipboard.writeText(detailRecoveryLink);
+                          setDetailLinkCopied(true);
+                          toast({ title: "Link copiado!" });
+                        }}
+                      >
+                        {detailLinkCopied ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      O link expira em 24 horas. Envie por canal seguro.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateRecoveryLink}
+                      disabled={generatingLink}
+                    >
+                      {generatingLink ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Gerar Link de Acesso
+                        </>
+                      )}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Use para enviar ao aluno definir/redefinir senha
+                    </span>
+                  </div>
+                )}
               </div>
 
               <Separator />

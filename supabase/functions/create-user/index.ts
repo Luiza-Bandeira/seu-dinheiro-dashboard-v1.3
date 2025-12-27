@@ -59,11 +59,11 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { email, fullName } = await req.json()
+    const { email, fullName, generateLinkOnly } = await req.json()
 
-    if (!email || !fullName) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: 'Email e nome são obrigatórios' }),
+        JSON.stringify({ error: 'Email é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -73,6 +73,40 @@ Deno.serve(async (req) => {
     if (!emailRegex.test(email)) {
       return new Response(
         JSON.stringify({ error: 'Formato de email inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // If generateLinkOnly is true, just generate a recovery link for existing user
+    if (generateLinkOnly) {
+      console.log('Generating recovery link for existing user:', email)
+      
+      const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+      })
+
+      if (resetError) {
+        console.error('Error generating reset link:', resetError)
+        return new Response(
+          JSON.stringify({ error: 'Erro ao gerar link. Usuário pode não existir.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          recoveryLink: resetData?.properties?.action_link || null
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Creating new user - fullName is required
+    if (!fullName) {
+      return new Response(
+        JSON.stringify({ error: 'Nome é obrigatório para criar novo usuário' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -114,7 +148,7 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
-        role: 'user', // Using 'user' as base role since 'aluno' may not exist
+        role: 'aluno',
       })
 
     if (roleError) {
@@ -138,7 +172,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         userId: newUser.user.id,
-        message: 'Usuário criado com sucesso. O aluno receberá um email para definir sua senha.',
+        message: 'Usuário criado com sucesso.',
         recoveryLink: resetData?.properties?.action_link || null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

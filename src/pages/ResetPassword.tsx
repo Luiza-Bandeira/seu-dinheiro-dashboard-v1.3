@@ -26,23 +26,41 @@ export default function ResetPassword() {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    // Listen for auth state changes (recovery link will trigger SIGNED_IN event)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setHasSession(!!session);
-        }
+    // Keep this page tolerant to auth link processing delays.
+    // When the recovery link is opened, the auth client may need a moment to
+    // detect the session from the URL and persist it.
+
+    let timeoutId: number | undefined;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasSession(!!session);
+      if (session) {
         setCheckingSession(false);
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session);
-      setCheckingSession(false);
     });
 
-    return () => subscription.unsubscribe();
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setHasSession(!!session);
+      if (session) {
+        setCheckingSession(false);
+        return;
+      }
+
+      // Final check after a short delay (allows URL session detection to complete)
+      timeoutId = window.setTimeout(async () => {
+        const { data: { session: s2 } } = await supabase.auth.getSession();
+        setHasSession(!!s2);
+        setCheckingSession(false);
+      }, 1500);
+    };
+
+    check();
+
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -172,6 +172,17 @@ Deno.serve(async (req) => {
       // Don't fail - user was created successfully
     }
 
+    // Approve user automatically so they can access library materials
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .update({ payment_status: 'approved' })
+      .eq('id', newUser.user.id)
+
+    if (profileError) {
+      console.error('Error updating profile payment_status:', profileError)
+      // Don't fail - user was created successfully
+    }
+
     // Generate password reset link so user can set their password
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',

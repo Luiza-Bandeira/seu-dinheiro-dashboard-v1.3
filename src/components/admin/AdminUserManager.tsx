@@ -265,6 +265,43 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
     };
   };
 
+  const [approvingAll, setApprovingAll] = useState(false);
+
+  const pendingCount = profiles.filter(p => p.payment_status !== 'approved').length;
+
+  const handleApproveAllPending = async () => {
+    setApprovingAll(true);
+    try {
+      const pendingProfiles = profiles.filter(p => p.payment_status !== 'approved');
+      
+      if (pendingProfiles.length === 0) {
+        toast({ title: "Nenhum usuário pendente para aprovar" });
+        return;
+      }
+
+      // Update all pending profiles to approved
+      const { error } = await supabase
+        .from('profiles')
+        .update({ payment_status: 'approved' })
+        .in('id', pendingProfiles.map(p => p.id));
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Sucesso!", 
+        description: `${pendingProfiles.length} usuário(s) aprovado(s).` 
+      });
+      onRefresh();
+
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      }
+    } finally {
+      setApprovingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -276,15 +313,31 @@ export function AdminUserManager({ profiles, onRefresh }: AdminUserManagerProps)
           </h3>
           <p className="text-sm text-muted-foreground">
             {profiles.length} usuários cadastrados
+            {pendingCount > 0 && ` • ${pendingCount} pendente(s)`}
           </p>
         </div>
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          className="bg-brand-magenta hover:bg-brand-magenta/90"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Novo Aluno
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          {pendingCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleApproveAllPending}
+              disabled={approvingAll}
+              className="border-green-500 text-green-600 hover:bg-green-50"
+            >
+              {approvingAll ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Aprovar Todos ({pendingCount})
+            </Button>
+          )}
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="bg-brand-magenta hover:bg-brand-magenta/90"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Novo Aluno
+          </Button>
+        </div>
       </div>
 
       {/* Users Table */}

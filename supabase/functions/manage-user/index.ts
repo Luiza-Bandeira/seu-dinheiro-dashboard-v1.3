@@ -178,7 +178,18 @@ Deno.serve(async (req) => {
         // Don't fail - user was created successfully
       }
 
-      console.log('User creation complete:', newUser.user.id)
+      // Approve user automatically so they can access library materials
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ payment_status: 'approved' })
+        .eq('id', newUser.user.id)
+
+      if (profileError) {
+        console.error('Error updating profile payment_status:', profileError)
+        // Don't fail - user was created successfully
+      }
+
+      console.log('User creation complete with approved status:', newUser.user.id)
 
       return new Response(
         JSON.stringify({ 

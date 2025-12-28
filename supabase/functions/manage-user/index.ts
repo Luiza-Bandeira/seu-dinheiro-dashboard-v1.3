@@ -165,27 +165,34 @@ Deno.serve(async (req) => {
 
       console.log('User created:', newUser.user.id)
 
-      // Add role 'aluno' to user_roles
+      // Add role 'aluno' to user_roles (upsert to avoid duplicates)
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
-        .insert({
+        .upsert({
           user_id: newUser.user.id,
           role: 'aluno',
-        })
+        }, { onConflict: 'user_id,role' })
 
       if (roleError) {
         console.error('Error adding role:', roleError)
         // Don't fail - user was created successfully
       }
 
-      // Approve user automatically so they can access library materials
+      // Wait a bit for the trigger to create the profile, then upsert to ensure data is correct
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Upsert profile to ensure it exists with correct data and approved status
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ payment_status: 'approved' })
-        .eq('id', newUser.user.id)
+        .upsert({
+          id: newUser.user.id,
+          email: email,
+          full_name: fullName,
+          payment_status: 'approved',
+        }, { onConflict: 'id' })
 
       if (profileError) {
-        console.error('Error updating profile payment_status:', profileError)
+        console.error('Error upserting profile:', profileError)
         // Don't fail - user was created successfully
       }
 

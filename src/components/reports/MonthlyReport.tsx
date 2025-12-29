@@ -134,14 +134,17 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Array.from({ length: 12 }, (_, i) => {
+            {/* 12 meses anteriores + 12 meses futuros para ver parcelas */}
+            {Array.from({ length: 24 }, (_, i) => {
               const date = new Date();
-              date.setMonth(date.getMonth() - i);
+              date.setMonth(date.getMonth() - 12 + i); // -12 até +11
               const value = date.toISOString().slice(0, 7);
               const label = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+              const isFuture = date > new Date();
               return (
                 <SelectItem key={value} value={value}>
                   {label.charAt(0).toUpperCase() + label.slice(1)}
+                  {isFuture && " (futuro)"}
                 </SelectItem>
               );
             })}

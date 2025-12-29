@@ -203,6 +203,8 @@ export type Database = {
           date: string
           description: string | null
           id: string
+          source_id: string | null
+          source_type: string | null
           type: Database["public"]["Enums"]["finance_type"]
           user_id: string | null
           value: number
@@ -213,6 +215,8 @@ export type Database = {
           date: string
           description?: string | null
           id?: string
+          source_id?: string | null
+          source_type?: string | null
           type: Database["public"]["Enums"]["finance_type"]
           user_id?: string | null
           value: number
@@ -223,6 +227,8 @@ export type Database = {
           date?: string
           description?: string | null
           id?: string
+          source_id?: string | null
+          source_type?: string | null
           type?: Database["public"]["Enums"]["finance_type"]
           user_id?: string | null
           value?: number

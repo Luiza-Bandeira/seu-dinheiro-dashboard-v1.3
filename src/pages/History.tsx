@@ -12,8 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { History as HistoryIcon, Filter, ArrowUpDown } from "lucide-react";
+import { History as HistoryIcon, Filter, ArrowUpDown, Trash2, RefreshCw, CreditCard } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Finance {
   id: string;
@@ -22,6 +34,8 @@ interface Finance {
   value: number;
   date: string;
   description: string | null;
+  source_type?: string | null;
+  source_id?: string | null;
 }
 
 export default function History() {
@@ -30,6 +44,7 @@ export default function History() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [finances, setFinances] = useState<Finance[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [filterType, setFilterType] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("");
@@ -75,6 +90,68 @@ export default function History() {
     }
 
     setFinances(data || []);
+  };
+
+  const handleDelete = async (finance: Finance, deleteAll: boolean = false) => {
+    if (!user) return;
+    
+    setDeletingId(finance.id);
+    
+    try {
+      if (deleteAll && finance.source_id && finance.source_type) {
+        // Excluir todos os lançamentos relacionados (futuros)
+        const today = new Date().toISOString().split("T")[0];
+        
+        const { error: deleteError } = await supabase
+          .from("finances")
+          .delete()
+          .eq("source_id", finance.source_id)
+          .gte("date", today);
+        
+        if (deleteError) throw deleteError;
+        
+        // Também desativar a despesa recorrente/parcelada original
+        if (finance.source_type === "recurring") {
+          await supabase
+            .from("recurring_expenses")
+            .update({ is_active: false })
+            .eq("id", finance.source_id);
+        } else if (finance.source_type === "installment") {
+          await supabase
+            .from("installment_purchases")
+            .update({ is_active: false })
+            .eq("id", finance.source_id);
+        }
+        
+        toast({
+          title: "Lançamentos excluídos!",
+          description: "Todos os lançamentos futuros foram removidos.",
+        });
+      } else {
+        // Excluir apenas este lançamento
+        const { error } = await supabase
+          .from("finances")
+          .delete()
+          .eq("id", finance.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Lançamento excluído!",
+          description: "O lançamento foi removido com sucesso.",
+        });
+      }
+      
+      await loadFinances(user.id);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const getFilteredFinances = () => {
@@ -129,6 +206,30 @@ export default function History() {
       debt: "bg-purple-500 text-white",
     };
     return colors[type] || "bg-gray-500 text-white";
+  };
+
+  const getSourceBadge = (finance: Finance) => {
+    if (!finance.source_type) return null;
+    
+    if (finance.source_type === "recurring") {
+      return (
+        <Badge variant="outline" className="ml-2 border-brand-magenta text-brand-magenta">
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Recorrente
+        </Badge>
+      );
+    }
+    
+    if (finance.source_type === "installment") {
+      return (
+        <Badge variant="outline" className="ml-2 border-brand-blue text-brand-blue">
+          <CreditCard className="h-3 w-3 mr-1" />
+          Parcelada
+        </Badge>
+      );
+    }
+    
+    return null;
   };
 
   if (loading) {
@@ -261,6 +362,7 @@ export default function History() {
                         <TableHead className="font-bold text-brand-blue">Valor</TableHead>
                         <TableHead className="font-bold text-brand-blue">Data</TableHead>
                         <TableHead className="font-bold text-brand-blue">Observações</TableHead>
+                        <TableHead className="font-bold text-brand-blue text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -270,9 +372,12 @@ export default function History() {
                           className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}
                         >
                           <TableCell>
-                            <Badge className={getTypeBadgeColor(finance.type)}>
-                              {getTypeLabel(finance.type)}
-                            </Badge>
+                            <div className="flex items-center flex-wrap">
+                              <Badge className={getTypeBadgeColor(finance.type)}>
+                                {getTypeLabel(finance.type)}
+                              </Badge>
+                              {getSourceBadge(finance)}
+                            </div>
                           </TableCell>
                           <TableCell className="font-medium">{finance.category}</TableCell>
                           <TableCell
@@ -288,8 +393,58 @@ export default function History() {
                           <TableCell>
                             {new Date(finance.date).toLocaleDateString("pt-BR")}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground max-w-[200px] truncate">
                             {finance.description || "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {finance.source_id ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    disabled={deletingId === finance.id}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir lançamento</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Este lançamento faz parte de uma {finance.source_type === "recurring" ? "despesa recorrente" : "compra parcelada"}. 
+                                      O que você deseja fazer?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(finance, false)}
+                                      className="bg-orange-500 hover:bg-orange-600"
+                                    >
+                                      Excluir apenas este
+                                    </AlertDialogAction>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(finance, true)}
+                                      className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                      Excluir todos futuros
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingId === finance.id}
+                                onClick={() => handleDelete(finance, false)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

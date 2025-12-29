@@ -100,52 +100,92 @@ export function QuickTransactionForm({
 
       } else if (mode === "recurring") {
         // Salvar na recurring_expenses para gestão
-        const { error: recurringError } = await supabase.from("recurring_expenses").insert([{
-          user_id: userId,
-          category,
-          description: description || null,
-          amount: value,
-          frequency,
-          start_date: date,
-          end_date: endDate || null,
-          next_due_date: date,
-          is_active: true,
-        }]);
+        const { data: recurringData, error: recurringError } = await supabase
+          .from("recurring_expenses")
+          .insert([{
+            user_id: userId,
+            category,
+            description: description || null,
+            amount: value,
+            frequency,
+            start_date: date,
+            end_date: endDate || null,
+            next_due_date: date,
+            is_active: true,
+          }])
+          .select()
+          .single();
 
         if (recurringError) throw recurringError;
 
-        // Também salvar na finances para aparecer nos relatórios
-        const { error: financeError } = await supabase.from("finances").insert([{
-          user_id: userId,
-          type: "fixed_expense" as FinanceType,
-          category,
-          value,
-          description: `${description || category} (Recorrente - ${FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label})`,
-          date,
-        }]);
+        // Calcular quantos lançamentos gerar baseado na frequência
+        const recurringEntries = [];
+        const startDateObj = new Date(date);
+        const endDateObj = endDate ? new Date(endDate) : null;
+        const frequencyLabel = FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label || "Mensal";
+        
+        // Gerar lançamentos para os próximos 12 meses (ou até end_date)
+        let currentDate = new Date(startDateObj);
+        let count = 0;
+        const maxEntries = 12; // Máximo de 12 lançamentos futuros
+        
+        while (count < maxEntries) {
+          // Verificar se passou da data fim
+          if (endDateObj && currentDate > endDateObj) break;
+          
+          recurringEntries.push({
+            user_id: userId,
+            type: "fixed_expense" as FinanceType,
+            category,
+            value,
+            description: `${description || category} (Recorrente - ${frequencyLabel})`,
+            date: currentDate.toISOString().split("T")[0],
+            source_type: "recurring",
+            source_id: recurringData.id,
+          });
+          
+          // Avançar para a próxima data baseado na frequência
+          if (frequency === "daily") {
+            currentDate.setDate(currentDate.getDate() + 1);
+          } else if (frequency === "weekly") {
+            currentDate.setDate(currentDate.getDate() + 7);
+          } else if (frequency === "monthly") {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+          } else if (frequency === "yearly") {
+            currentDate.setFullYear(currentDate.getFullYear() + 1);
+          }
+          
+          count++;
+        }
+
+        const { error: financeError } = await supabase.from("finances").insert(recurringEntries);
 
         if (financeError) throw financeError;
 
         toast({
           title: "Despesa recorrente adicionada!",
-          description: `${category} será cobrada ${FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label.toLowerCase()}.`,
+          description: `${category} - ${count} lançamentos gerados (${frequencyLabel.toLowerCase()}).`,
         });
 
       } else if (mode === "installment") {
         const installmentAmount = value / totalInstallments;
 
         // Salvar na installment_purchases para gestão
-        const { error: installmentError } = await supabase.from("installment_purchases").insert([{
-          user_id: userId,
-          category,
-          description: description || null,
-          total_amount: value,
-          installment_amount: installmentAmount,
-          total_installments: totalInstallments,
-          paid_installments: 0,
-          start_date: date,
-          is_active: true,
-        }]);
+        const { data: installmentData, error: installmentError } = await supabase
+          .from("installment_purchases")
+          .insert([{
+            user_id: userId,
+            category,
+            description: description || null,
+            total_amount: value,
+            installment_amount: installmentAmount,
+            total_installments: totalInstallments,
+            paid_installments: 0,
+            start_date: date,
+            is_active: true,
+          }])
+          .select()
+          .single();
 
         if (installmentError) throw installmentError;
 
@@ -164,6 +204,8 @@ export function QuickTransactionForm({
             value: installmentAmount,
             description: `${description || category} - Parcela ${i + 1}/${totalInstallments}`,
             date: installmentDate.toISOString().split("T")[0],
+            source_type: "installment",
+            source_id: installmentData.id,
           });
         }
 

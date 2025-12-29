@@ -1,11 +1,28 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Build dynamic CORS headers based on origin
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || ''
+  
+  // Allow localhost for development and lovableproject.com for production
+  const allowedOrigins = [
+    /^https?:\/\/localhost(:\d+)?$/,
+    /^https?:\/\/.*\.lovableproject\.com$/,
+    /^https?:\/\/.*\.lovable\.app$/,
+  ]
+  
+  const isAllowed = allowedOrigins.some(pattern => pattern.test(origin))
+  
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : '',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -43,14 +60,15 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if requesting user is admin
-    const { data: adminProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', requestingUser.id)
-      .single()
+    // Check if requesting user is admin using user_roles table (consistent with RLS policies)
+    const { data: adminRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', requestingUser.id)
+      .eq('role', 'admin')
+      .maybeSingle()
 
-    if (!adminProfile?.is_admin) {
+    if (!adminRole) {
       console.error('User is not admin:', requestingUser.id)
       return new Response(
         JSON.stringify({ error: 'Apenas administradores podem criar usuários' }),
@@ -212,7 +230,7 @@ Deno.serve(async (req) => {
     console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     )
   }
 })

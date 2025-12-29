@@ -12,14 +12,34 @@ import { BasicInformation } from "@/components/tools/BasicInformation";
 import { CurrentInvestments } from "@/components/tools/CurrentInvestments";
 import { ReductionGoals } from "@/components/tools/ReductionGoals";
 import { WeeklyTracking } from "@/components/tools/WeeklyTracking";
+import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  CreditCard, 
+  TrendingUp, 
+  Calculator, 
+  Target, 
+  TrendingDown,
+  Wallet
+} from "lucide-react";
+
+const TOOL_CARDS = [
+  { value: "basic", label: "Informações Básicas", icon: Wallet, description: "Bancos, cartões e dívidas" },
+  { value: "current-investments", label: "Investimentos", icon: TrendingUp, description: "Gerencie seus investimentos" },
+  { value: "budget", label: "Orçamento", icon: Calculator, description: "Receitas e despesas" },
+  { value: "goals", label: "Objetivos", icon: Target, description: "Metas financeiras" },
+  { value: "reduction", label: "Redução Semanal", icon: TrendingDown, description: "Controle de gastos" },
+];
 
 export default function Tools() {
   const navigate = useNavigate();
   const { isOpen, setIsOpen } = useSidebar();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("basic");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -57,6 +77,37 @@ export default function Tools() {
     );
   }
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "basic":
+        return <BasicInformation userId={user?.id || ""} />;
+      case "current-investments":
+        return <CurrentInvestments userId={user?.id || ""} />;
+      case "budget":
+        return <BudgetCalculator userId={user?.id || ""} />;
+      case "goals":
+        return (
+          <>
+            <GoalsManager userId={user?.id || ""} />
+            <div className="mt-8">
+              <InvestmentSimulator userId={user?.id || ""} />
+            </div>
+          </>
+        );
+      case "reduction":
+        return (
+          <>
+            <ReductionGoals userId={user?.id || ""} />
+            <div className="mt-6">
+              <WeeklyTracking userId={user?.id || ""} />
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header user={user} onMenuClick={() => setIsOpen(!isOpen)} />
@@ -78,41 +129,100 @@ export default function Tools() {
               </p>
             </div>
 
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-5 gap-1 lg:gap-2">
-                <TabsTrigger value="basic" className="whitespace-nowrap">Informações Básicas</TabsTrigger>
-                <TabsTrigger value="current-investments" className="whitespace-nowrap">Investimentos</TabsTrigger>
-                <TabsTrigger value="budget" className="whitespace-nowrap">Orçamento</TabsTrigger>
-                <TabsTrigger value="goals" className="whitespace-nowrap">Objetivos</TabsTrigger>
-                <TabsTrigger value="reduction" className="whitespace-nowrap">Redução Semanal</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="basic" className="mt-6">
-                <BasicInformation userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="current-investments" className="mt-6">
-                <CurrentInvestments userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="budget" className="mt-6">
-                <BudgetCalculator userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="goals" className="mt-6">
-                <GoalsManager userId={user?.id || ""} />
-                <div className="mt-8">
-                  <InvestmentSimulator userId={user?.id || ""} />
+            {isMobile ? (
+              // Mobile: Card-based navigation
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {TOOL_CARDS.map((tool) => {
+                    const Icon = tool.icon;
+                    const isActive = activeTab === tool.value;
+                    return (
+                      <motion.div
+                        key={tool.value}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Card
+                          className={`cursor-pointer transition-all rounded-2xl h-full ${
+                            isActive
+                              ? "border-primary bg-primary/5 shadow-md"
+                              : "border-border hover:border-primary/50 hover:shadow-sm"
+                          }`}
+                          onClick={() => setActiveTab(tool.value)}
+                        >
+                          <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                            <div className={`p-3 rounded-xl ${isActive ? "bg-primary/10" : "bg-muted"}`}>
+                              <Icon className={`h-6 w-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                            </div>
+                            <div>
+                              <p className={`font-medium text-sm ${isActive ? "text-primary" : "text-foreground"}`}>
+                                {tool.label}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                {tool.description}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-              </TabsContent>
 
-              <TabsContent value="reduction" className="mt-6">
-                <ReductionGoals userId={user?.id || ""} />
-                <div className="mt-6">
-                  <WeeklyTracking userId={user?.id || ""} />
-                </div>
-              </TabsContent>
-            </Tabs>
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {renderTabContent()}
+                </motion.div>
+              </div>
+            ) : (
+              // Desktop: Tabs layout
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="w-full grid grid-cols-5 gap-2">
+                  {TOOL_CARDS.map((tool) => {
+                    const Icon = tool.icon;
+                    return (
+                      <TabsTrigger 
+                        key={tool.value} 
+                        value={tool.value} 
+                        className="flex items-center gap-2"
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{tool.label}</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
+                <TabsContent value="basic" className="mt-6">
+                  <BasicInformation userId={user?.id || ""} />
+                </TabsContent>
+
+                <TabsContent value="current-investments" className="mt-6">
+                  <CurrentInvestments userId={user?.id || ""} />
+                </TabsContent>
+
+                <TabsContent value="budget" className="mt-6">
+                  <BudgetCalculator userId={user?.id || ""} />
+                </TabsContent>
+
+                <TabsContent value="goals" className="mt-6">
+                  <GoalsManager userId={user?.id || ""} />
+                  <div className="mt-8">
+                    <InvestmentSimulator userId={user?.id || ""} />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="reduction" className="mt-6">
+                  <ReductionGoals userId={user?.id || ""} />
+                  <div className="mt-6">
+                    <WeeklyTracking userId={user?.id || ""} />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </motion.div>
       </main>

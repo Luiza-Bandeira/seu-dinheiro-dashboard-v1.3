@@ -99,7 +99,8 @@ export function QuickTransactionForm({
         });
 
       } else if (mode === "recurring") {
-        const { error } = await supabase.from("recurring_expenses").insert([{
+        // Salvar na recurring_expenses para gestão
+        const { error: recurringError } = await supabase.from("recurring_expenses").insert([{
           user_id: userId,
           category,
           description: description || null,
@@ -111,7 +112,19 @@ export function QuickTransactionForm({
           is_active: true,
         }]);
 
-        if (error) throw error;
+        if (recurringError) throw recurringError;
+
+        // Também salvar na finances para aparecer nos relatórios
+        const { error: financeError } = await supabase.from("finances").insert([{
+          user_id: userId,
+          type: "fixed_expense" as FinanceType,
+          category,
+          value,
+          description: `${description || category} (Recorrente - ${FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label})`,
+          date,
+        }]);
+
+        if (financeError) throw financeError;
 
         toast({
           title: "Despesa recorrente adicionada!",
@@ -121,7 +134,8 @@ export function QuickTransactionForm({
       } else if (mode === "installment") {
         const installmentAmount = value / totalInstallments;
 
-        const { error } = await supabase.from("installment_purchases").insert([{
+        // Salvar na installment_purchases para gestão
+        const { error: installmentError } = await supabase.from("installment_purchases").insert([{
           user_id: userId,
           category,
           description: description || null,
@@ -133,11 +147,33 @@ export function QuickTransactionForm({
           is_active: true,
         }]);
 
-        if (error) throw error;
+        if (installmentError) throw installmentError;
+
+        // Gerar lançamentos para CADA parcela na finances
+        const installmentEntries = [];
+        const startDate = new Date(date);
+        
+        for (let i = 0; i < totalInstallments; i++) {
+          const installmentDate = new Date(startDate);
+          installmentDate.setMonth(installmentDate.getMonth() + i);
+          
+          installmentEntries.push({
+            user_id: userId,
+            type: "fixed_expense" as FinanceType,
+            category,
+            value: installmentAmount,
+            description: `${description || category} - Parcela ${i + 1}/${totalInstallments}`,
+            date: installmentDate.toISOString().split("T")[0],
+          });
+        }
+
+        const { error: financeError } = await supabase.from("finances").insert(installmentEntries);
+
+        if (financeError) throw financeError;
 
         toast({
           title: "Compra parcelada adicionada!",
-          description: `${category} em ${totalInstallments}x de R$ ${installmentAmount.toFixed(2)}.`,
+          description: `${category} em ${totalInstallments}x de R$ ${installmentAmount.toFixed(2)}. Lançamentos gerados para os próximos ${totalInstallments} meses.`,
         });
       }
 

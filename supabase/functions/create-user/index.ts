@@ -4,17 +4,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || ''
   
-  // Allow localhost for development and lovableproject.com for production
   const allowedOrigins = [
     /^https?:\/\/localhost(:\d+)?$/,
     /^https?:\/\/.*\.lovableproject\.com$/,
     /^https?:\/\/.*\.lovable\.app$/,
+    /^https?:\/\/.*--.*\.lovable\.app$/,
+    /^https?:\/\/(www\.)?seudinheironamesa\.luizabandeira\.com\.br$/,
   ]
   
   const isAllowed = allowedOrigins.some(pattern => pattern.test(origin))
   
+  console.log('CORS check - Origin:', origin, 'Allowed:', isAllowed)
+  
+  const allowOrigin = isAllowed ? origin : (origin ? '*' : '')
+  
   return {
-    'Access-Control-Allow-Origin': isAllowed ? origin : '',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   }

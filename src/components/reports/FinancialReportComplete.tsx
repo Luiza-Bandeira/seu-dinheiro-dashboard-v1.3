@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 import { Download, FileText, FileSpreadsheet, TrendingUp, TrendingDown, Wallet, CreditCard, Banknote, Receipt, PiggyBank } from "lucide-react";
 import { exportToPDF, exportToCSV, formatCurrency } from "@/utils/exportUtils";
@@ -188,28 +188,8 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
           <h2 className="text-2xl font-bold text-brand-blue">Relatório Financeiro Completo</h2>
           <p className="text-muted-foreground">Visão detalhada das suas finanças</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {/* 12 meses anteriores + 12 meses futuros para ver parcelas */}
-              {Array.from({ length: 24 }, (_, i) => {
-                const date = new Date();
-                date.setMonth(date.getMonth() - 12 + i); // -12 até +11
-                const value = date.toISOString().slice(0, 7);
-                const label = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-                const isFuture = date > new Date();
-                return (
-                  <SelectItem key={value} value={value}>
-                    {label.charAt(0).toUpperCase() + label.slice(1)}
-                    {isFuture && " (futuro)"}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-3 flex-wrap">
+          <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} />
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
             <FileText className="h-4 w-4 mr-2" />
             PDF

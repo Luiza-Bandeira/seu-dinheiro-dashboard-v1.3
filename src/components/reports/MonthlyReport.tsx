@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 
 interface MonthlyReportProps {
   userId: string;
@@ -28,8 +28,10 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
 
   const loadMonthData = async () => {
     // Carregar dados do mês atual
+    const [year, month] = selectedMonth.split("-");
     const startDate = `${selectedMonth}-01`;
-    const endDate = new Date(selectedMonth + "-28").toISOString().slice(0, 10);
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+    const endDate = `${selectedMonth}-${String(lastDay).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from("finances")
@@ -44,11 +46,11 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
     }
 
     // Carregar dados do mês anterior para comparação
-    const prevMonth = new Date(selectedMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonth = new Date(parseInt(year), parseInt(month) - 2, 1);
     const prevMonthStr = prevMonth.toISOString().slice(0, 7);
+    const prevLastDay = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate();
     const prevStartDate = `${prevMonthStr}-01`;
-    const prevEndDate = new Date(prevMonthStr + "-28").toISOString().slice(0, 10);
+    const prevEndDate = `${prevMonthStr}-${String(prevLastDay).padStart(2, '0')}`;
 
     const { data: prevData } = await supabase
       .from("finances")
@@ -127,29 +129,9 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-brand-blue">Relatório Mensal</h2>
-        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {/* 12 meses anteriores + 12 meses futuros para ver parcelas */}
-            {Array.from({ length: 24 }, (_, i) => {
-              const date = new Date();
-              date.setMonth(date.getMonth() - 12 + i); // -12 até +11
-              const value = date.toISOString().slice(0, 7);
-              const label = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-              const isFuture = date > new Date();
-              return (
-                <SelectItem key={value} value={value}>
-                  {label.charAt(0).toUpperCase() + label.slice(1)}
-                  {isFuture && " (futuro)"}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

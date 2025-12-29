@@ -265,6 +265,51 @@ export type Database = {
         }
         Relationships: []
       }
+      installment_purchases: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          installment_amount: number
+          is_active: boolean
+          paid_installments: number
+          start_date: string
+          total_amount: number
+          total_installments: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          installment_amount: number
+          is_active?: boolean
+          paid_installments?: number
+          start_date?: string
+          total_amount: number
+          total_installments: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          installment_amount?: number
+          is_active?: boolean
+          paid_installments?: number
+          start_date?: string
+          total_amount?: number
+          total_installments?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investment_withdrawals: {
         Row: {
           amount: number
@@ -461,6 +506,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recurring_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          next_due_date: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          next_due_date?: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          next_due_date?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       reduction_goals: {
         Row: {

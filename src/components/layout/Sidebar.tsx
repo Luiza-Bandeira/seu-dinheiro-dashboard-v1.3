@@ -24,18 +24,19 @@ const navItems = [
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Verificar se é admin
+  // Verificar se é admin usando user_roles table
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", session.user.id)
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
           .maybeSingle();
         
-        setIsAdmin(profile?.is_admin || false);
+        setIsAdmin(!!userRole);
       }
     };
     checkAdmin();

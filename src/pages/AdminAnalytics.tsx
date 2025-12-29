@@ -80,14 +80,15 @@ export default function AdminAnalytics() {
 
     setUser(session.user);
 
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", session.user.id)
+    // Check if user is admin using user_roles table
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .eq("role", "admin")
       .maybeSingle();
 
-    if (!profile?.is_admin) {
+    if (!userRole) {
       toast({
         title: "Acesso negado",
         description: "Você não tem permissão para acessar esta página.",

@@ -8,14 +8,22 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentContent } from "@/components/dashboard/RecentContent";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory";
+import { QuickTransactionForm } from "@/components/tools/QuickTransactionForm";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Plus } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { isOpen, setIsOpen } = useSidebar();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -67,14 +75,60 @@ export default function Dashboard() {
           transition={{ duration: 0.5 }}
         >
           <div className="max-w-7xl mx-auto space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-brand-blue mb-2">
-                Olá, {user?.user_metadata?.full_name || "Membro"}! 👋
-              </h1>
-              <p className="text-muted-foreground">
-                Bem-vindo à sua área de membros. Continue sua jornada de educação financeira.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-brand-blue mb-2">
+                  Olá, {user?.user_metadata?.full_name || "Membro"}! 👋
+                </h1>
+                <p className="text-muted-foreground">
+                  Bem-vindo à sua área de membros. Continue sua jornada de educação financeira.
+                </p>
+              </div>
+              <Button 
+                onClick={() => setTransactionModalOpen(true)}
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Adicionar Lançamento
+              </Button>
             </div>
+
+            {/* Transaction Modal - Dialog for desktop, Drawer for mobile */}
+            {isMobile ? (
+              <Drawer open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
+                <DrawerContent>
+                  <DrawerHeader>
+                    <DrawerTitle className="text-brand-blue">Adicionar Lançamento</DrawerTitle>
+                  </DrawerHeader>
+                  <div className="px-4 pb-6">
+                    <QuickTransactionForm 
+                      userId={user?.id || ""} 
+                      onSuccess={() => setTransactionModalOpen(false)}
+                      showTitle={false}
+                      compact
+                    />
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            ) : (
+              <Dialog open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-brand-blue flex items-center gap-2">
+                      <Plus className="h-5 w-5" />
+                      Adicionar Lançamento
+                    </DialogTitle>
+                  </DialogHeader>
+                  <QuickTransactionForm 
+                    userId={user?.id || ""} 
+                    onSuccess={() => setTransactionModalOpen(false)}
+                    showTitle={false}
+                    compact
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
 
             <DashboardStats userId={user?.id || ""} />
 

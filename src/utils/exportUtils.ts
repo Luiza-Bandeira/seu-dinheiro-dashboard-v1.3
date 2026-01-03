@@ -190,3 +190,47 @@ export const formatPercentage = (value: number): string => {
 export const formatDate = (date: string | Date): string => {
   return new Date(date).toLocaleDateString("pt-BR");
 };
+
+export const downloadBatchTemplate = () => {
+  const wb = XLSX.utils.book_new();
+  
+  // Template sheet with examples
+  const modeloData = [
+    ["Tipo", "Categoria", "Valor", "Descrição", "Data", "Tipo de Lançamento"],
+    ["Receita", "Salário", 5000, "Salário empresa X", "01/01/2025", "Recorrente"],
+    ["Despesa", "Aluguel", 1500, "Apartamento", "05/01/2025", "Recorrente"],
+    ["Despesa", "TV Nova", 3000, "Televisão", "10/01/2025", "12x"],
+    ["Receita", "Freelance", 800, "Projeto web", "15/01/2025", "Única"],
+    ["Despesa Fixa", "Internet", 120, "Plano fibra", "10/01/2025", "Recorrente"],
+    ["Despesa Variável", "Supermercado", 450, "Compras do mês", "20/01/2025", "Única"],
+  ];
+  
+  // Instructions sheet
+  const instrucoesData = [
+    ["Campo", "Descrição", "Valores Aceitos"],
+    ["Tipo", "Tipo da transação", "Receita, Despesa, Despesa Fixa, Despesa Variável, A Receber, Dívida"],
+    ["Categoria", "Nome da categoria", "Texto livre (obrigatório)"],
+    ["Valor", "Valor em reais", "Número positivo (obrigatório)"],
+    ["Descrição", "Descrição opcional", "Texto livre"],
+    ["Data", "Data do lançamento", "Formato DD/MM/AAAA (ex: 01/01/2025)"],
+    ["Tipo de Lançamento", "Frequência", "Única, Recorrente, ou Nx (ex: 12x, 6x, 3x)"],
+  ];
+  
+  // Create sheets
+  const wsModelo = XLSX.utils.aoa_to_sheet(modeloData);
+  const wsInstrucoes = XLSX.utils.aoa_to_sheet(instrucoesData);
+  
+  // Adjust column widths
+  wsModelo["!cols"] = [
+    { wch: 18 }, { wch: 15 }, { wch: 10 }, 
+    { wch: 25 }, { wch: 12 }, { wch: 20 }
+  ];
+  wsInstrucoes["!cols"] = [
+    { wch: 20 }, { wch: 30 }, { wch: 55 }
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, wsModelo, "Modelo");
+  XLSX.utils.book_append_sheet(wb, wsInstrucoes, "Instruções");
+  
+  XLSX.writeFile(wb, "modelo-lancamento-lote.xlsx");
+};

@@ -64,9 +64,22 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
   };
 
   const getWeekLabel = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = new Date(start + "T12:00:00"); // Avoid timezone issues
+    const endDate = new Date(end + "T12:00:00");
     return `${startDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${endDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
+  };
+
+  // Helper to get week boundaries starting on Sunday
+  const getWeekBoundaries = (date: Date) => {
+    const dayOfWeek = date.getDay(); // 0 = Sunday
+    const sunday = new Date(date);
+    sunday.setDate(date.getDate() - dayOfWeek);
+    const saturday = new Date(sunday);
+    saturday.setDate(sunday.getDate() + 6);
+    return {
+      start: sunday.toISOString().slice(0, 10),
+      end: saturday.toISOString().slice(0, 10),
+    };
   };
 
   const analyzeWeek = (tracking: WeeklyTracking) => {

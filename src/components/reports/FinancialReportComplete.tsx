@@ -97,10 +97,34 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       .sort((a, b) => b.value - a.value);
   };
 
-  const getMonthlyEvolution = () => {
+  const [monthlyEvolution, setMonthlyEvolution] = useState<{ month: string; receitas: number; despesas: number }[]>([]);
+
+  useEffect(() => {
+    loadMonthlyEvolution();
+  }, [userId]);
+
+  const loadMonthlyEvolution = async () => {
+    // Calculate date range for last 6 months
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 5);
+    startDate.setDate(1);
+
+    const { data, error } = await supabase
+      .from("finances")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("date", startDate.toISOString().slice(0, 10))
+      .lte("date", endDate.toISOString().slice(0, 10))
+      .order("date", { ascending: true });
+
+    if (error || !data) {
+      console.error("Erro ao carregar evolução mensal:", error);
+      return;
+    }
+
+    // Initialize months
     const months: { [key: string]: { receitas: number; despesas: number } } = {};
-    
-    // Get last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
@@ -108,7 +132,8 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       months[monthKey] = { receitas: 0, despesas: 0 };
     }
 
-    entries.forEach(entry => {
+    // Aggregate data by month
+    data.forEach((entry: FinanceEntry) => {
       const monthKey = entry.date.slice(0, 7);
       if (months[monthKey]) {
         if (entry.type === "income" || entry.type === "receivable") {
@@ -119,13 +144,15 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       }
     });
 
-    return Object.entries(months).map(([month, values]) => {
+    const evolutionData = Object.entries(months).map(([month, values]) => {
       const date = new Date(month + "-01");
       return {
         month: date.toLocaleDateString("pt-BR", { month: "short" }),
         ...values,
       };
     });
+
+    setMonthlyEvolution(evolutionData);
   };
 
   const handleExportPDF = () => {
@@ -170,7 +197,6 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
 
   const totals = calculateTotals();
   const expenseDistribution = getExpenseDistribution();
-  const monthlyEvolution = getMonthlyEvolution();
 
   if (loading) {
     return <div className="text-center py-10 text-muted-foreground">Carregando relatório...</div>;

@@ -139,22 +139,23 @@ export function WeeklyTracking({ userId }: WeeklyTrackingProps) {
     return { goal, targetValue, percentage, withinBudget };
   };
 
-  // Auto-fill dates for current week
+  // Auto-fill dates for current week (starting on Sunday)
   const fillCurrentWeek = () => {
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
 
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diffToMonday);
+    // Find Sunday of current week
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - dayOfWeek);
 
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    // Saturday is 6 days after Sunday
+    const saturday = new Date(sunday);
+    saturday.setDate(sunday.getDate() + 6);
 
     setNewEntry({
       ...newEntry,
-      week_start: monday.toISOString().split("T")[0],
-      week_end: sunday.toISOString().split("T")[0],
+      week_start: sunday.toISOString().split("T")[0],
+      week_end: saturday.toISOString().split("T")[0],
     });
   };
 

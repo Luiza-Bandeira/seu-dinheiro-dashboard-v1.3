@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 
 interface ExpensesByCategoryProps {
   userId: string;
+  refreshKey?: number;
 }
 
 interface CategoryData {
@@ -28,14 +29,14 @@ const COLORS = [
   "#f97316",
 ];
 
-export function ExpensesByCategory({ userId }: ExpensesByCategoryProps) {
+export function ExpensesByCategory({ userId, refreshKey }: ExpensesByCategoryProps) {
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadExpenses();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   const loadExpenses = async () => {
     const now = new Date();

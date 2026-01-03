@@ -5,9 +5,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 
 interface FinancialSummaryProps {
   userId: string;
+  refreshKey?: number;
 }
 
-export function FinancialSummary({ userId }: FinancialSummaryProps) {
+export function FinancialSummary({ userId, refreshKey }: FinancialSummaryProps) {
   const [summary, setSummary] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -17,7 +18,7 @@ export function FinancialSummary({ userId }: FinancialSummaryProps) {
 
   useEffect(() => {
     loadFinancialSummary();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   const loadFinancialSummary = async () => {
     // Get finances

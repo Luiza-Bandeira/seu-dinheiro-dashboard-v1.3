@@ -12,6 +12,7 @@ import Library from "./pages/Library";
 import ModuleDetail from "./pages/ModuleDetail";
 import Tools from "./pages/Tools";
 import Reports from "./pages/Reports";
+import Rewards from "./pages/Rewards";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/library/:moduleId" element={<ModuleDetail />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/rewards" element={<Rewards />} />
             <Route path="/admin" element={<AdminAnalytics />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />

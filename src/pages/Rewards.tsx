@@ -5,14 +5,14 @@ import { User } from "@supabase/supabase-js";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FinancialReportComplete } from "@/components/reports/FinancialReportComplete";
-import { MonthlyReport } from "@/components/reports/MonthlyReport";
-import { WeeklyReport } from "@/components/reports/WeeklyReport";
-import { CategoryReport } from "@/components/reports/CategoryReport";
+import { ProgressOverview } from "@/components/rewards/ProgressOverview";
+import { AchievementsList } from "@/components/rewards/AchievementsList";
+import { RewardsList } from "@/components/rewards/RewardsList";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { Trophy, Star, Gift } from "lucide-react";
 
-export default function Reports() {
+export default function Rewards() {
   const navigate = useNavigate();
   const { isOpen, setIsOpen } = useSidebar();
   const [user, setUser] = useState<User | null>(null);
@@ -68,35 +68,40 @@ export default function Reports() {
           <div className="max-w-7xl mx-auto space-y-6">
             <div>
               <h1 className="text-3xl font-bold text-brand-blue mb-2">
-                Relatórios Inteligentes
+                Conquistas e Brindes
               </h1>
               <p className="text-muted-foreground">
-                Análise completa das suas finanças com insights automáticos
+                Acompanhe seu progresso, desbloqueie conquistas e resgate brindes exclusivos
               </p>
             </div>
 
-            <Tabs defaultValue="financial" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 gap-2">
-                <TabsTrigger value="financial">Financeiro</TabsTrigger>
-                <TabsTrigger value="monthly">Mensal</TabsTrigger>
-                <TabsTrigger value="weekly">Semanal</TabsTrigger>
-                <TabsTrigger value="category">Categoria</TabsTrigger>
+            <Tabs defaultValue="progress" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 gap-2">
+                <TabsTrigger value="progress" className="flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  <span className="hidden sm:inline">Meu Progresso</span>
+                  <span className="sm:hidden">Progresso</span>
+                </TabsTrigger>
+                <TabsTrigger value="achievements" className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  <span>Conquistas</span>
+                </TabsTrigger>
+                <TabsTrigger value="rewards" className="flex items-center gap-2">
+                  <Gift className="w-4 h-4" />
+                  <span>Brindes</span>
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="financial" className="mt-6">
-                <FinancialReportComplete userId={user?.id || ""} />
+              <TabsContent value="progress" className="mt-6">
+                <ProgressOverview userId={user?.id || ""} />
               </TabsContent>
 
-              <TabsContent value="monthly" className="mt-6">
-                <MonthlyReport userId={user?.id || ""} />
+              <TabsContent value="achievements" className="mt-6">
+                <AchievementsList userId={user?.id || ""} />
               </TabsContent>
 
-              <TabsContent value="weekly" className="mt-6">
-                <WeeklyReport userId={user?.id || ""} />
-              </TabsContent>
-
-              <TabsContent value="category" className="mt-6">
-                <CategoryReport userId={user?.id || ""} />
+              <TabsContent value="rewards" className="mt-6">
+                <RewardsList userId={user?.id || ""} />
               </TabsContent>
             </Tabs>
           </div>

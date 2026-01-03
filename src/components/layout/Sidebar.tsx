@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, Wrench, BarChart3, X, User, Bell, History, Shield } from "lucide-react";
+import { Home, BookOpen, Wrench, BarChart3, X, User, Bell, History, Shield, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ interface SidebarProps {
 const navItems = [
   { to: "/dashboard", icon: Home, label: "Dashboard" },
   { to: "/library", icon: BookOpen, label: "Biblioteca" },
+  { to: "/rewards", icon: Trophy, label: "Conquistas" },
   { to: "/tools", icon: Wrench, label: "Ferramentas" },
   { to: "/reports", icon: BarChart3, label: "Relatórios" },
   { to: "/history", icon: History, label: "Histórico Financeiro" },

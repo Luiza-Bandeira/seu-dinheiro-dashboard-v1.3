@@ -23,7 +23,13 @@ export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const isMobile = useIsMobile();
+
+  const handleTransactionSuccess = () => {
+    setTransactionModalOpen(false);
+    setRefreshKey(prev => prev + 1);
+  };
 
   useEffect(() => {
     const checkUser = async () => {
@@ -104,7 +110,7 @@ export default function Dashboard() {
                   <div className="px-4 pb-6">
                     <QuickTransactionForm 
                       userId={user?.id || ""} 
-                      onSuccess={() => setTransactionModalOpen(false)}
+                      onSuccess={handleTransactionSuccess}
                       showTitle={false}
                       compact
                     />
@@ -122,7 +128,7 @@ export default function Dashboard() {
                   </DialogHeader>
                   <QuickTransactionForm 
                     userId={user?.id || ""} 
-                    onSuccess={() => setTransactionModalOpen(false)}
+                    onSuccess={handleTransactionSuccess}
                     showTitle={false}
                     compact
                   />
@@ -134,8 +140,8 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <RecentContent userId={user?.id || ""} />
-              <FinancialSummary userId={user?.id || ""} />
-              <ExpensesByCategory userId={user?.id || ""} />
+              <FinancialSummary userId={user?.id || ""} refreshKey={refreshKey} />
+              <ExpensesByCategory userId={user?.id || ""} refreshKey={refreshKey} />
             </div>
           </div>
         </motion.div>

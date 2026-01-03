@@ -97,20 +97,26 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       .sort((a, b) => b.value - a.value);
   };
 
-  const [monthlyEvolution, setMonthlyEvolution] = useState<{ month: string; receitas: number; despesas: number }[]>([]);
+  const [monthlyEvolution, setMonthlyEvolution] = useState<{ month: string; receitas: number; despesas: number; isFuture: boolean }[]>([]);
 
   useEffect(() => {
     loadMonthlyEvolution();
   }, [userId]);
 
   const loadMonthlyEvolution = async () => {
-    // Calculate date range for last 6 months
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 5);
+    const today = new Date();
+    
+    // Calculate date range: 3 past months + current + 2 future months
+    const startDate = new Date(today);
+    startDate.setMonth(today.getMonth() - 3);
     startDate.setDate(1);
+    
+    const endDate = new Date(today);
+    endDate.setMonth(today.getMonth() + 2);
+    endDate.setDate(31);
 
-    const { data, error } = await supabase
+    // Fetch real financial data
+    const { data: financeData, error: financeError } = await supabase
       .from("finances")
       .select("*")
       .eq("user_id", userId)
@@ -118,22 +124,38 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       .lte("date", endDate.toISOString().slice(0, 10))
       .order("date", { ascending: true });
 
-    if (error || !data) {
-      console.error("Erro ao carregar evolução mensal:", error);
+    // Fetch recurring expenses for projections
+    const { data: recurringData } = await supabase
+      .from("recurring_expenses")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true);
+
+    // Fetch installments for projections
+    const { data: installmentsData } = await supabase
+      .from("installment_purchases")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_active", true);
+
+    if (financeError) {
+      console.error("Erro ao carregar evolução mensal:", financeError);
       return;
     }
 
-    // Initialize months
-    const months: { [key: string]: { receitas: number; despesas: number } } = {};
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
+    // Initialize months: 3 past + current + 2 future
+    const currentMonthKey = today.toISOString().slice(0, 7);
+    const months: { [key: string]: { receitas: number; despesas: number; isFuture: boolean } } = {};
+    
+    for (let i = -3; i <= 2; i++) {
+      const date = new Date(today);
+      date.setMonth(today.getMonth() + i);
       const monthKey = date.toISOString().slice(0, 7);
-      months[monthKey] = { receitas: 0, despesas: 0 };
+      months[monthKey] = { receitas: 0, despesas: 0, isFuture: i > 0 };
     }
 
-    // Aggregate data by month
-    data.forEach((entry: FinanceEntry) => {
+    // Aggregate real data by month
+    (financeData || []).forEach((entry: FinanceEntry) => {
       const monthKey = entry.date.slice(0, 7);
       if (months[monthKey]) {
         if (entry.type === "income" || entry.type === "receivable") {
@@ -144,13 +166,37 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       }
     });
 
-    const evolutionData = Object.entries(months).map(([month, values]) => {
-      const date = new Date(month + "-01");
-      return {
-        month: date.toLocaleDateString("pt-BR", { month: "short" }),
-        ...values,
-      };
+    // Add projections for future months from recurring expenses
+    (recurringData || []).forEach((recurring: any) => {
+      Object.keys(months).forEach((monthKey) => {
+        if (months[monthKey].isFuture) {
+          months[monthKey].despesas += Number(recurring.amount);
+        }
+      });
     });
+
+    // Add projections for future months from installments
+    (installmentsData || []).forEach((installment: any) => {
+      const remainingInstallments = installment.total_installments - installment.paid_installments;
+      let projectedMonth = 1;
+      
+      Object.keys(months).forEach((monthKey) => {
+        if (months[monthKey].isFuture && projectedMonth <= remainingInstallments) {
+          months[monthKey].despesas += Number(installment.installment_amount);
+          projectedMonth++;
+        }
+      });
+    });
+
+    const evolutionData = Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, values]) => {
+        const date = new Date(month + "-01");
+        return {
+          month: date.toLocaleDateString("pt-BR", { month: "short" }),
+          ...values,
+        };
+      });
 
     setMonthlyEvolution(evolutionData);
   };
@@ -348,10 +394,28 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Tooltip 
+                  formatter={(value: number) => formatCurrency(value)} 
+                  labelFormatter={(label, payload) => {
+                    if (payload && payload[0]?.payload?.isFuture) {
+                      return `${label} (projeção)`;
+                    }
+                    return label;
+                  }}
+                />
                 <Legend />
-                <Bar dataKey="receitas" name="Receitas" fill="#22c55e" />
-                <Bar dataKey="despesas" name="Despesas" fill="#ef137c" />
+                <Bar 
+                  dataKey="receitas" 
+                  name="Receitas" 
+                  fill="#22c55e" 
+                  fillOpacity={0.9}
+                />
+                <Bar 
+                  dataKey="despesas" 
+                  name="Despesas" 
+                  fill="#ef137c"
+                  fillOpacity={0.9}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Trash2, Pencil, RefreshCw, CreditCard, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { Trash2, Pencil, RefreshCw, CreditCard, TrendingUp, TrendingDown, BarChart3, Plus, FileSpreadsheet } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { QuickTransactionForm } from "./QuickTransactionForm";
+import { BatchTextImport } from "./BatchTextImport";
 import { RecurringExpensesList } from "./RecurringExpensesList";
 import { InstallmentPurchasesList } from "./InstallmentPurchasesList";
 import { motion } from "framer-motion";
@@ -49,6 +50,7 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
   const [installmentPurchases, setInstallmentPurchases] = useState<InstallmentPurchase[]>([]);
   const [editingEntry, setEditingEntry] = useState<FinanceEntry | null>(null);
   const [loading, setLoading] = useState(false);
+  const [formMode, setFormMode] = useState<"individual" | "batch">("individual");
 
   useEffect(() => {
     loadAllData();
@@ -312,16 +314,41 @@ export function BudgetCalculator({ userId }: BudgetCalculatorProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Form Mode Toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={formMode === "individual" ? "default" : "outline"}
+          onClick={() => setFormMode("individual")}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Lançamento Individual
+        </Button>
+        <Button
+          variant={formMode === "batch" ? "default" : "outline"}
+          onClick={() => setFormMode("batch")}
+          className="flex items-center gap-2"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Lançamento em Lote
+        </Button>
+      </div>
+
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Transaction Form */}
+        {/* Transaction Form (Individual or Batch) */}
         <motion.div
           variants={cardVariants}
           initial="hidden"
           animate="visible"
           transition={{ duration: 0.3 }}
+          key={formMode}
         >
-          <QuickTransactionForm userId={userId} onSuccess={loadAllData} />
+          {formMode === "individual" ? (
+            <QuickTransactionForm userId={userId} onSuccess={loadAllData} />
+          ) : (
+            <BatchTextImport userId={userId} onSuccess={loadAllData} />
+          )}
         </motion.div>
 
         {/* Budget Summary */}

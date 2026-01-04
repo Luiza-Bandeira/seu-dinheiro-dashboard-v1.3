@@ -135,7 +135,7 @@ export function QuickTransactionForm({
           
           recurringEntries.push({
             user_id: userId,
-            type: "fixed_expense" as FinanceType,
+            type: type as FinanceType,
             category,
             value,
             description: `${description || category} (Recorrente - ${frequencyLabel})`,
@@ -162,8 +162,9 @@ export function QuickTransactionForm({
 
         if (financeError) throw financeError;
 
+        const typeLabel = type === "income" ? "Receita" : "Despesa";
         toast({
-          title: "Despesa recorrente adicionada!",
+          title: `${typeLabel} recorrente adicionada!`,
           description: `${category} - ${count} lançamentos gerados (${frequencyLabel.toLowerCase()}).`,
         });
 
@@ -199,7 +200,7 @@ export function QuickTransactionForm({
           
           installmentEntries.push({
             user_id: userId,
-            type: "fixed_expense" as FinanceType,
+            type: type as FinanceType,
             category,
             value: installmentAmount,
             description: `${description || category} - Parcela ${i + 1}/${totalInstallments}`,

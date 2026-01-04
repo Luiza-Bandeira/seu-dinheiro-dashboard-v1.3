@@ -241,7 +241,7 @@ export function BatchTextImport({ userId, onSuccess }: BatchTextImportProps) {
               
               entries.push({
                 user_id: userId,
-                type: "fixed_expense" as FinanceType,
+                type: row.typeEnum,
                 category: row.category,
                 value: row.value,
                 description: `${row.description || row.category} (Recorrente)`,
@@ -286,7 +286,7 @@ export function BatchTextImport({ userId, onSuccess }: BatchTextImportProps) {
               
               entries.push({
                 user_id: userId,
-                type: "fixed_expense" as FinanceType,
+                type: row.typeEnum,
                 category: row.category,
                 value: installmentAmount,
                 description: `${row.description || row.category} - Parcela ${i + 1}/${row.installments}`,

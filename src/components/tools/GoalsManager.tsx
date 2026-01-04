@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Target, Pencil } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 
 interface GoalsManagerProps {
   userId: string;
@@ -32,6 +33,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
   });
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [loading, setLoading] = useState(false);
+  const { unlockAchievement, awardPoints } = useGamification(userId);
 
   useEffect(() => {
     loadGoals();
@@ -89,6 +91,11 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
       description: "Sua meta financeira foi registrada com sucesso.",
     });
 
+    // Gamification
+    await unlockAchievement("first_goal");
+    await awardPoints("first_transaction", "Criou objetivo financeiro");
+    await checkFullControl();
+
     setNewGoal({
       goal_name: "",
       target_value: 0,
@@ -98,6 +105,27 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
 
     await loadGoals();
     setLoading(false);
+  };
+
+  const checkFullControl = async () => {
+    const { count: goalsCount } = await supabase
+      .from("goals")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: financeCount } = await supabase
+      .from("finances")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: reductionCount } = await supabase
+      .from("reduction_goals")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    if ((goalsCount || 0) > 0 && (financeCount || 0) > 0 && (reductionCount || 0) > 0) {
+      await unlockAchievement("full_control");
+    }
   };
 
   const handleUpdateGoal = async () => {

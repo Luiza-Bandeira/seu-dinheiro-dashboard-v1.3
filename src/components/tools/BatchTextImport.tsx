@@ -9,6 +9,7 @@ import { Download, Upload, FileSpreadsheet, Check, X, AlertCircle } from "lucide
 import { Database } from "@/integrations/supabase/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { downloadBatchTemplate } from "@/utils/exportUtils";
+import { useGamification } from "@/hooks/useGamification";
 import {
   Table,
   TableBody,
@@ -64,6 +65,7 @@ export function BatchTextImport({ userId, onSuccess }: BatchTextImportProps) {
   const [parsedRows, setParsedRows] = useState<ParsedTransaction[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { unlockAchievement, awardPoints } = useGamification(userId);
 
   const parseDate = (dateStr: string): string => {
     if (!dateStr) return new Date().toISOString().split("T")[0];
@@ -306,6 +308,10 @@ export function BatchTextImport({ userId, onSuccess }: BatchTextImportProps) {
         title: "Lançamentos salvos!",
         description: `${savedCount} transações foram registradas com sucesso.`,
       });
+
+      // Gamification
+      await unlockAchievement("batch_import");
+      await awardPoints("batch_import", `Importou ${savedCount} lançamentos`);
 
       // Reset form
       setRawText("");

@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Receipt, RefreshCw, CreditCard } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGamification } from "@/hooks/useGamification";
 
 type FinanceType = Database["public"]["Enums"]["finance_type"];
 
@@ -39,6 +40,7 @@ export function QuickTransactionForm({
 }: QuickTransactionFormProps) {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<TransactionMode>("single");
+  const { awardPoints } = useGamification(userId);
   
   // Core fields
   const [type, setType] = useState<string>("income");
@@ -219,6 +221,9 @@ export function QuickTransactionForm({
           description: `${category} em ${totalInstallments}x de R$ ${installmentAmount.toFixed(2)}. Lançamentos gerados para os próximos ${totalInstallments} meses.`,
         });
       }
+
+      // Gamification - award points for any successful transaction
+      await awardPoints("first_transaction", `Lançamento ${mode}`);
 
       resetForm();
       onSuccess?.();

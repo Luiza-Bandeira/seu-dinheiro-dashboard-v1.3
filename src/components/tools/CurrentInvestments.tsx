@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, TrendingUp, ArrowDownCircle, History } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [withdrawNotes, setWithdrawNotes] = useState("");
+  const { unlockAchievement, awardPoints } = useGamification(userId);
 
   useEffect(() => {
     loadInvestments();
@@ -120,6 +122,10 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
       title: "Investimento adicionado!",
       description: "Seu investimento foi registrado com sucesso.",
     });
+
+    // Gamification
+    await unlockAchievement("first_investment");
+    await awardPoints("first_transaction", "Cadastrou investimento");
 
     setNewInvestment({
       name: "",

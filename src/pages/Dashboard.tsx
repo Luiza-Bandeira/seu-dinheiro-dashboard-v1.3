@@ -103,11 +103,11 @@ export default function Dashboard() {
             {/* Transaction Modal - Dialog for desktop, Drawer for mobile */}
             {isMobile ? (
               <Drawer open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
-                <DrawerContent>
+                <DrawerContent className="max-h-[85vh]">
                   <DrawerHeader>
                     <DrawerTitle className="text-brand-blue">Adicionar Lançamento</DrawerTitle>
                   </DrawerHeader>
-                  <div className="px-4 pb-6">
+                  <div className="px-4 pb-6 overflow-y-auto flex-1">
                     <QuickTransactionForm 
                       userId={user?.id || ""} 
                       onSuccess={handleTransactionSuccess}

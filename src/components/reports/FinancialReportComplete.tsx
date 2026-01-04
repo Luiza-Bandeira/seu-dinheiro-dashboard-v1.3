@@ -115,7 +115,7 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
     endDate.setMonth(today.getMonth() + 2);
     endDate.setDate(31);
 
-    // Fetch real financial data
+    // Fetch real financial data (including future months that already have entries)
     const { data: financeData, error: financeError } = await supabase
       .from("finances")
       .select("*")
@@ -154,7 +154,17 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       months[monthKey] = { receitas: 0, despesas: 0, isFuture: i > 0 };
     }
 
-    // Aggregate real data by month
+    // Create a set of existing source entries to avoid duplication
+    // Format: "source_type-source_id-month"
+    const existingSourceEntries = new Set<string>();
+    (financeData || []).forEach((entry: any) => {
+      if (entry.source_type && entry.source_id) {
+        const monthKey = entry.date.slice(0, 7);
+        existingSourceEntries.add(`${entry.source_type}-${entry.source_id}-${monthKey}`);
+      }
+    });
+
+    // Aggregate real data by month (including future months with existing entries)
     (financeData || []).forEach((entry: FinanceEntry) => {
       const monthKey = entry.date.slice(0, 7);
       if (months[monthKey]) {
@@ -166,24 +176,36 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       }
     });
 
-    // Add projections for future months from recurring expenses
+    // Add projections for future months from recurring expenses (only if not already in finances)
     (recurringData || []).forEach((recurring: any) => {
       Object.keys(months).forEach((monthKey) => {
         if (months[monthKey].isFuture) {
-          months[monthKey].despesas += Number(recurring.amount);
+          const sourceKey = `recurring-${recurring.id}-${monthKey}`;
+          if (!existingSourceEntries.has(sourceKey)) {
+            months[monthKey].despesas += Number(recurring.amount);
+          }
         }
       });
     });
 
-    // Add projections for future months from installments
+    // Add projections for future months from installments (only if not already in finances)
     (installmentsData || []).forEach((installment: any) => {
-      const remainingInstallments = installment.total_installments - installment.paid_installments;
-      let projectedMonth = 1;
+      const startMonth = new Date(installment.start_date);
+      let projectedInstallment = 0;
       
-      Object.keys(months).forEach((monthKey) => {
-        if (months[monthKey].isFuture && projectedMonth <= remainingInstallments) {
-          months[monthKey].despesas += Number(installment.installment_amount);
-          projectedMonth++;
+      Object.keys(months).sort().forEach((monthKey) => {
+        if (months[monthKey].isFuture) {
+          const monthDate = new Date(monthKey + "-01");
+          const monthsDiff = (monthDate.getFullYear() - startMonth.getFullYear()) * 12 + 
+                            (monthDate.getMonth() - startMonth.getMonth());
+          
+          // Check if this installment should be projected for this month
+          if (monthsDiff >= 0 && monthsDiff < installment.total_installments) {
+            const sourceKey = `installment-${installment.id}-${monthKey}`;
+            if (!existingSourceEntries.has(sourceKey)) {
+              months[monthKey].despesas += Number(installment.installment_amount);
+            }
+          }
         }
       });
     });
@@ -199,6 +221,42 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
       });
 
     setMonthlyEvolution(evolutionData);
+  };
+
+  // Weekly evolution for the selected month
+  const getWeeklyEvolution = () => {
+    const weeklyData: { [key: string]: { receitas: number; despesas: number } } = {};
+    
+    entries.forEach((entry) => {
+      const entryDate = new Date(entry.date + "T12:00:00");
+      const dayOfWeek = entryDate.getDay();
+      const sunday = new Date(entryDate);
+      sunday.setDate(entryDate.getDate() - dayOfWeek);
+      
+      const weekNum = Math.ceil(entryDate.getDate() / 7);
+      const weekLabel = `Sem ${weekNum}`;
+      
+      if (!weeklyData[weekLabel]) {
+        weeklyData[weekLabel] = { receitas: 0, despesas: 0 };
+      }
+      
+      if (entry.type === "income" || entry.type === "receivable") {
+        weeklyData[weekLabel].receitas += Number(entry.value);
+      } else {
+        weeklyData[weekLabel].despesas += Number(entry.value);
+      }
+    });
+
+    return Object.entries(weeklyData)
+      .sort(([a], [b]) => {
+        const numA = parseInt(a.replace("Sem ", ""));
+        const numB = parseInt(b.replace("Sem ", ""));
+        return numA - numB;
+      })
+      .map(([week, data]) => ({
+        week,
+        ...data
+      }));
   };
 
   const handleExportPDF = () => {
@@ -243,6 +301,7 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
 
   const totals = calculateTotals();
   const expenseDistribution = getExpenseDistribution();
+  const weeklyEvolution = getWeeklyEvolution();
 
   if (loading) {
     return <div className="text-center py-10 text-muted-foreground">Carregando relatório...</div>;
@@ -421,6 +480,31 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de Evolução Semanal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-brand-blue">Evolução Semanal</CardTitle>
+          <CardDescription>Receitas e despesas por semana no mês selecionado</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {weeklyEvolution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklyEvolution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="receitas" name="Receitas" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="despesas" name="Despesas" fill="#ef137c" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-muted-foreground py-10">Nenhum lançamento no período selecionado</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabela detalhada */}
       <Card>

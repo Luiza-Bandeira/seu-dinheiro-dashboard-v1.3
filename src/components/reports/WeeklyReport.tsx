@@ -2,9 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle2, TrendingUp, TrendingDown, CalendarDays } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Target, Plus } from "lucide-react";
 import { formatCurrency } from "@/utils/exportUtils";
+import { toast } from "@/components/ui/use-toast";
 
 interface WeeklyReportProps {
   userId: string;
@@ -46,6 +52,12 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
   const [weeklyData, setWeeklyData] = useState<WeeklyTracking[]>([]);
   const [reductionGoals, setReductionGoals] = useState<ReductionGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Goal dialog state
+  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [targetValue, setTargetValue] = useState("");
+  const [periodType, setPeriodType] = useState("semanal");
 
   useEffect(() => {
     loadData();
@@ -170,6 +182,37 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
     return ((currentSpent - previousSpent) / previousSpent) * 100;
   };
 
+  const handleAddGoal = (category: string) => {
+    setSelectedCategory(category);
+    setTargetValue("");
+    setPeriodType("semanal");
+    setIsGoalDialogOpen(true);
+  };
+
+  const handleSaveGoal = async () => {
+    if (!targetValue || Number(targetValue) <= 0) {
+      toast({ title: "Erro", description: "Informe um valor válido", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase.from("reduction_goals").insert({
+      user_id: userId,
+      category: selectedCategory,
+      target_value: Number(targetValue),
+      period_type: periodType,
+      status: "active",
+    });
+
+    if (error) {
+      toast({ title: "Erro", description: "Erro ao criar meta", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Sucesso", description: `Meta criada para ${selectedCategory}!` });
+    setIsGoalDialogOpen(false);
+    loadData();
+  };
+
   if (loading) {
     return <div className="text-center py-10">Carregando relatórios...</div>;
   }
@@ -180,6 +223,51 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
         <h2 className="text-2xl font-bold text-brand-blue">Relatório Semanal</h2>
         <p className="text-muted-foreground">Gastos agregados por semana (Domingo a Sábado)</p>
       </div>
+
+      {/* Dialog para adicionar meta */}
+      <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Meta de Redução</DialogTitle>
+            <DialogDescription>
+              Defina um limite de gastos para a categoria: <strong>{selectedCategory}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="targetValue">Valor Limite (R$)</Label>
+              <Input
+                id="targetValue"
+                type="number"
+                min={1}
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value)}
+                placeholder="Ex: 500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="periodType">Período</Label>
+              <Select value={periodType} onValueChange={setPeriodType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semanal">Semanal</SelectItem>
+                  <SelectItem value="mensal">Mensal</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {periodType === "semanal" 
+                  ? "Limite aplicado a cada semana" 
+                  : "Limite mensal dividido por 4 para cálculo semanal"}
+              </p>
+            </div>
+            <Button onClick={handleSaveGoal} className="w-full">
+              Salvar Meta
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Automatic aggregation from finances */}
       {weeklyAggregates.length > 0 ? (
@@ -231,7 +319,15 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
                             </Badge>
                           )}
                           {analysis.status === "sem_meta" && (
-                            <Badge variant="outline">Sem meta</Badge>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleAddGoal(category)}
+                              className="gap-1"
+                            >
+                              <Target className="h-3 w-3" />
+                              Adicionar Meta
+                            </Button>
                           )}
                         </div>
 

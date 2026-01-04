@@ -205,7 +205,6 @@ export function CategoryReport({ userId }: CategoryReportProps) {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       outerRadius={100}
                       dataKey="value"
                     >
@@ -214,7 +213,16 @@ export function CategoryReport({ userId }: CategoryReportProps) {
                       ))}
                     </Pie>
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Legend />
+                    <Legend 
+                      layout="vertical" 
+                      align="right" 
+                      verticalAlign="middle"
+                      formatter={(value) => {
+                        const cat = categorySummary.find(c => c.name === value);
+                        const percent = cat ? cat.percentage.toFixed(0) : 0;
+                        return `${value} (${percent}%)`;
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (

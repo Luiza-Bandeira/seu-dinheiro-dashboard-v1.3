@@ -83,17 +83,28 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
   };
 
   const getWeeklyData = () => {
-    const weeks: { [key: string]: number } = { "Semana 1": 0, "Semana 2": 0, "Semana 3": 0, "Semana 4": 0 };
+    const weeks: { [key: string]: { value: number; label: string } } = {};
     
     entries.forEach(entry => {
       if (entry.type !== "income" && entry.type !== "receivable") {
-        const day = new Date(entry.date).getDate();
-        const weekNum = Math.ceil(day / 7);
-        weeks[`Semana ${weekNum}`] += Number(entry.value);
+        const entryDate = new Date(entry.date + "T12:00:00");
+        const dayOfWeek = entryDate.getDay();
+        const sunday = new Date(entryDate);
+        sunday.setDate(entryDate.getDate() - dayOfWeek);
+        
+        const weekKey = sunday.toISOString().slice(0, 10);
+        const weekLabel = `${sunday.getDate()}/${sunday.getMonth() + 1}`;
+        
+        if (!weeks[weekKey]) {
+          weeks[weekKey] = { value: 0, label: weekLabel };
+        }
+        weeks[weekKey].value += Number(entry.value);
       }
     });
 
-    return Object.entries(weeks).map(([name, value]) => ({ name, value }));
+    return Object.entries(weeks)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([_, data]) => ({ name: `Sem ${data.label}`, value: data.value }));
   };
 
   const getCategoryData = () => {
@@ -192,7 +203,6 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.name}: ${((entry.value / totals.expenses) * 100).toFixed(1)}%`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -202,6 +212,16 @@ export function MonthlyReport({ userId }: MonthlyReportProps) {
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
+                  <Legend 
+                    layout="vertical" 
+                    align="right" 
+                    verticalAlign="middle"
+                    formatter={(value) => {
+                      const cat = categoryData.find(c => c.name === value);
+                      const percent = cat ? ((cat.value / totals.expenses) * 100).toFixed(0) : 0;
+                      return `${value} (${percent}%)`;
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (

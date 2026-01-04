@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, CreditCard, Building2, Wallet } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 
 interface BanksAndCardsProps {
   userId: string;
@@ -33,6 +34,7 @@ export function BanksAndCards({ userId }: BanksAndCardsProps) {
     other_fees: "",
   });
   const [loading, setLoading] = useState(false);
+  const { unlockAchievement, awardPoints } = useGamification(userId);
 
   useEffect(() => {
     loadAccounts();
@@ -89,6 +91,10 @@ export function BanksAndCards({ userId }: BanksAndCardsProps) {
       title: "Adicionado!",
       description: "Conta/cartão registrado com sucesso.",
     });
+
+    // Gamification
+    await unlockAchievement("first_bank");
+    await awardPoints("first_transaction", "Cadastrou banco/cartão");
 
     setNewAccount({
       name: "",

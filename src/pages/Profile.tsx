@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Upload, Save, LogOut } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { useGamification } from "@/hooks/useGamification";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -27,6 +28,8 @@ export default function Profile() {
   const [profession, setProfession] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  
+  const { unlockAchievement, awardPoints } = useGamification(user?.id);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -99,6 +102,14 @@ export default function Profile() {
         title: "Perfil atualizado!",
         description: "Suas informações foram salvas com sucesso.",
       });
+      
+      // Gamification
+      await awardPoints("profile_updated", "Atualizou perfil");
+      
+      // Check if profile is complete
+      if (fullName && phone && profession && avatarUrl) {
+        await unlockAchievement("profile_complete");
+      }
     }
     setSaving(false);
   };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Plus } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -25,11 +26,32 @@ export default function Dashboard() {
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const isMobile = useIsMobile();
+  
+  const { unlockAchievement, awardPoints, hasAchievement } = useGamification(user?.id);
 
   const handleTransactionSuccess = () => {
     setTransactionModalOpen(false);
     setRefreshKey(prev => prev + 1);
   };
+
+  const checkWelcomeAndDailyLogin = useCallback(async () => {
+    if (!user?.id) return;
+    
+    // Welcome achievement
+    if (!hasAchievement("welcome")) {
+      await unlockAchievement("welcome");
+    }
+    
+    // Daily login points
+    const today = new Date().toISOString().split("T")[0];
+    const lastLoginKey = `lastLogin_${user.id}`;
+    const lastLogin = localStorage.getItem(lastLoginKey);
+    
+    if (lastLogin !== today) {
+      localStorage.setItem(lastLoginKey, today);
+      await awardPoints("daily_login", "Login diário");
+    }
+  }, [user?.id, hasAchievement, unlockAchievement, awardPoints]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -60,6 +82,13 @@ export default function Dashboard() {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Check welcome achievement and daily login after user is loaded
+  useEffect(() => {
+    if (user?.id && !loading) {
+      checkWelcomeAndDailyLogin();
+    }
+  }, [user?.id, loading, checkWelcomeAndDailyLogin]);
 
   if (loading) {
     return (

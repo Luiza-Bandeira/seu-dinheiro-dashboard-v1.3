@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Target, Pencil } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 
 interface ReductionGoalsProps {
   userId: string;
@@ -33,6 +34,7 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
   });
   const [editingGoal, setEditingGoal] = useState<ReductionGoal | null>(null);
   const [loading, setLoading] = useState(false);
+  const { unlockAchievement, awardPoints } = useGamification(userId);
 
   useEffect(() => {
     loadGoals();
@@ -90,6 +92,10 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
       description: "Sua meta de redução foi registrada.",
     });
 
+    // Gamification
+    await awardPoints("first_transaction", "Criou meta de redução");
+    await checkFullControl();
+
     setNewGoal({
       category: "",
       period_type: "mensal",
@@ -99,6 +105,27 @@ export function ReductionGoals({ userId }: ReductionGoalsProps) {
 
     await loadGoals();
     setLoading(false);
+  };
+
+  const checkFullControl = async () => {
+    const { count: goalsCount } = await supabase
+      .from("goals")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: financeCount } = await supabase
+      .from("finances")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    const { count: reductionCount } = await supabase
+      .from("reduction_goals")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    if ((goalsCount || 0) > 0 && (financeCount || 0) > 0 && (reductionCount || 0) > 0) {
+      await unlockAchievement("full_control");
+    }
   };
 
   const handleUpdateGoal = async () => {

@@ -84,9 +84,6 @@ export function AdminRewardsManager() {
     setLoading(false);
   };
 
-    setLoading(false);
-  };
-
   const resetForm = () => {
     setName("");
     setDescription("");

@@ -30,7 +30,7 @@ const TOOL_CARDS = [
   { value: "current-investments", label: "Investimentos", icon: TrendingUp, description: "Gerencie seus investimentos" },
   { value: "budget", label: "Orçamento", icon: Calculator, description: "Receitas e despesas" },
   { value: "goals", label: "Objetivos", icon: Target, description: "Metas financeiras" },
-  { value: "reduction", label: "Redução Semanal", icon: TrendingDown, description: "Controle de gastos" },
+  { value: "reduction", label: "Metas de Redução", icon: TrendingDown, description: "Defina limites por categoria" },
 ];
 
 export default function Tools() {

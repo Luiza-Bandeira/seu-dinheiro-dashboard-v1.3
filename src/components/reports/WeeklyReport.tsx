@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Target, Plus } from "lucide-react";
+import { AlertCircle, CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Target } from "lucide-react";
 import { formatCurrency } from "@/utils/exportUtils";
 import { toast } from "@/components/ui/use-toast";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 
 interface WeeklyReportProps {
   userId: string;
@@ -52,6 +53,7 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
   const [weeklyData, setWeeklyData] = useState<WeeklyTracking[]>([]);
   const [reductionGoals, setReductionGoals] = useState<ReductionGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   
   // Goal dialog state
   const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
@@ -61,7 +63,7 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
 
   useEffect(() => {
     loadData();
-  }, [userId]);
+  }, [userId, selectedMonth]);
 
   const loadData = async () => {
     setLoading(true);
@@ -89,27 +91,36 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
       setWeeklyData(tracking);
     }
 
-    // Load finances for automatic aggregation (last 5 weeks)
-    const fiveWeeksAgo = new Date();
-    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35);
+    // Calculate date range for selected month
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    const lastDayOfMonth = new Date(year, month, 0);
+    
+    // Extend range to include full weeks that overlap with the month
+    const startOfFirstWeek = new Date(firstDayOfMonth);
+    startOfFirstWeek.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay());
+    
+    const endOfLastWeek = new Date(lastDayOfMonth);
+    endOfLastWeek.setDate(lastDayOfMonth.getDate() + (6 - lastDayOfMonth.getDay()));
     
     const { data: finances } = await supabase
       .from("finances")
       .select("*")
       .eq("user_id", userId)
-      .gte("date", fiveWeeksAgo.toISOString().slice(0, 10))
+      .gte("date", startOfFirstWeek.toISOString().slice(0, 10))
+      .lte("date", endOfLastWeek.toISOString().slice(0, 10))
       .order("date", { ascending: false });
 
     if (finances) {
-      const aggregates = aggregateByWeek(finances);
+      const aggregates = aggregateByWeek(finances, year, month);
       setWeeklyAggregates(aggregates);
     }
 
     setLoading(false);
   };
 
-  // Aggregate finances by week (Sunday to Saturday)
-  const aggregateByWeek = (finances: FinanceEntry[]): WeeklyAggregate[] => {
+  // Aggregate finances by week (Sunday to Saturday) - filtered by selected month
+  const aggregateByWeek = (finances: FinanceEntry[], year: number, month: number): WeeklyAggregate[] => {
     const weekMap: { [key: string]: WeeklyAggregate } = {};
 
     finances.forEach((entry) => {
@@ -147,7 +158,18 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
       }
     });
 
-    return Object.values(weekMap).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+    // Filter weeks that have at least one day in the selected month
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    const lastDayOfMonth = new Date(year, month, 0);
+
+    return Object.values(weekMap)
+      .filter((week) => {
+        const weekStart = new Date(week.weekStart + "T12:00:00");
+        const weekEnd = new Date(week.weekEnd + "T12:00:00");
+        // Week overlaps with month if weekEnd >= firstDay AND weekStart <= lastDay
+        return weekEnd >= firstDayOfMonth && weekStart <= lastDayOfMonth;
+      })
+      .sort((a, b) => b.weekStart.localeCompare(a.weekStart));
   };
 
   const getWeekLabel = (start: string, end: string) => {
@@ -217,11 +239,22 @@ export function WeeklyReport({ userId }: WeeklyReportProps) {
     return <div className="text-center py-10">Carregando relatórios...</div>;
   }
 
+  const getMonthName = (monthStr: string) => {
+    const [year, month] = monthStr.split("-").map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-brand-blue">Relatório Semanal</h2>
-        <p className="text-muted-foreground">Gastos agregados por semana (Domingo a Sábado)</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-brand-blue">Relatório Semanal</h2>
+          <p className="text-muted-foreground">
+            Gastos de {getMonthName(selectedMonth)} (Domingo a Sábado)
+          </p>
+        </div>
+        <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
       {/* Dialog para adicionar meta */}

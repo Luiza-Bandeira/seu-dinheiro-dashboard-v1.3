@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Calendar, TrendingDown, TrendingUp } from "lucide-react";
+import { Plus, Calendar, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
 
 interface WeeklyTrackingProps {
   userId: string;
@@ -124,6 +124,28 @@ export function WeeklyTracking({ userId }: WeeklyTrackingProps) {
 
     await loadEntries();
     setLoading(false);
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    const { error } = await supabase
+      .from("weekly_tracking")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao deletar",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Registro deletado!",
+      description: "O acompanhamento foi removido.",
+    });
+    await loadEntries();
   };
 
   const getGoalComparison = (entry: WeeklyEntry) => {
@@ -274,9 +296,19 @@ export function WeeklyTracking({ userId }: WeeklyTrackingProps) {
                               {new Date(entry.week_end).toLocaleDateString("pt-BR")}
                             </p>
                           </div>
-                          <p className="text-lg font-bold text-primary">
-                            R$ {Number(entry.total_spent).toFixed(2)}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-lg font-bold text-primary">
+                              R$ {Number(entry.total_spent).toFixed(2)}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         {comparison && (

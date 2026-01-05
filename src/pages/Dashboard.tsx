@@ -8,6 +8,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentContent } from "@/components/dashboard/RecentContent";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory";
+import { ReductionGoalsWidget } from "@/components/dashboard/ReductionGoalsWidget";
 import { QuickTransactionForm } from "@/components/tools/QuickTransactionForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -172,6 +173,8 @@ export default function Dashboard() {
               <FinancialSummary userId={user?.id || ""} refreshKey={refreshKey} />
               <ExpensesByCategory userId={user?.id || ""} refreshKey={refreshKey} />
             </div>
+
+            <ReductionGoalsWidget userId={user?.id || ""} />
           </div>
         </motion.div>
       </main>

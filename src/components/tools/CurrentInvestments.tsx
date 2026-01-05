@@ -89,6 +89,28 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     setWithdrawals(data || []);
   };
 
+  const handleDeleteWithdrawal = async (id: string) => {
+    const { error } = await supabase
+      .from("investment_withdrawals")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao deletar resgate",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Resgate deletado!",
+      description: "O registro foi removido do histórico.",
+    });
+    await loadWithdrawals();
+  };
+
   const handleAddInvestment = async () => {
     if (!newInvestment.name || newInvestment.current_value <= 0) {
       toast({
@@ -488,7 +510,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                 <Card key={withdrawal.id} className="border-border">
                   <CardContent className="pt-4">
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-semibold text-brand-blue">{withdrawal.investment_name}</h4>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(withdrawal.withdrawn_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
@@ -499,9 +521,19 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                           </p>
                         )}
                       </div>
-                      <p className="text-lg font-bold text-amber-600">
-                        R$ {Number(withdrawal.amount).toFixed(2)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-lg font-bold text-amber-600">
+                          R$ {Number(withdrawal.amount).toFixed(2)}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeleteWithdrawal(withdrawal.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

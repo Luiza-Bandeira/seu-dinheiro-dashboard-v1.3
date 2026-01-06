@@ -91,15 +91,23 @@ export function ReductionGoalsWidget({ userId }: ReductionGoalsWidgetProps) {
   ): Promise<number> => {
     const now = new Date();
     let startDate: string;
+    let endDate: string;
 
     if (periodType === "mensal") {
+      // Primeiro dia do mês corrente
       startDate = new Date(now.getFullYear(), now.getMonth(), 1)
         .toISOString()
         .split("T")[0];
+      // Último dia do mês corrente
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        .toISOString()
+        .split("T")[0];
     } else {
+      // Últimos 7 dias para semanal
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
       startDate = weekAgo.toISOString().split("T")[0];
+      endDate = now.toISOString().split("T")[0];
     }
 
     const { data } = await supabase
@@ -108,6 +116,7 @@ export function ReductionGoalsWidget({ userId }: ReductionGoalsWidgetProps) {
       .eq("user_id", userId)
       .eq("category", category)
       .gte("date", startDate)
+      .lte("date", endDate)
       .in("type", ["fixed_expense", "variable_expense", "debt"]);
 
     return data?.reduce((sum, f) => sum + Number(f.value), 0) || 0;

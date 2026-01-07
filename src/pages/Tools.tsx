@@ -139,15 +139,23 @@ export default function Tools() {
                     return (
                       <motion.div
                         key={tool.value}
-                        whileTap={{ scale: 0.98 }}
+                        className="active:scale-[0.98] transition-transform"
                       >
                         <Card
-                          className={`cursor-pointer transition-all rounded-2xl h-full ${
+                          role="button"
+                          tabIndex={0}
+                          className={`cursor-pointer transition-all rounded-2xl h-full touch-manipulation select-none ${
                             isActive
                               ? "border-primary bg-primary/5 shadow-md"
                               : "border-border hover:border-primary/50 hover:shadow-sm"
                           }`}
                           onClick={() => setActiveTab(tool.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setActiveTab(tool.value);
+                            }
+                          }}
                         >
                           <CardContent className="p-4 flex flex-col items-center text-center gap-2">
                             <div className={`p-3 rounded-xl ${isActive ? "bg-primary/10" : "bg-muted"}`}>

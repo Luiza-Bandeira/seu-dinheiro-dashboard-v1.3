@@ -9,6 +9,8 @@ import { RecentContent } from "@/components/dashboard/RecentContent";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory";
 import { ReductionGoalsWidget } from "@/components/dashboard/ReductionGoalsWidget";
+import { GoalsWidget } from "@/components/dashboard/GoalsWidget";
+import { DebtsWidget } from "@/components/dashboard/DebtsWidget";
 import { QuickTransactionForm } from "@/components/tools/QuickTransactionForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -175,6 +177,11 @@ export default function Dashboard() {
             </div>
 
             <ReductionGoalsWidget userId={user?.id || ""} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <GoalsWidget userId={user?.id || ""} />
+              <DebtsWidget userId={user?.id || ""} />
+            </div>
           </div>
         </motion.div>
       </main>

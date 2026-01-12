@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Target, Pencil } from "lucide-react";
+import { Plus, Trash2, Target, Pencil, TrendingUp, CheckCircle2, Calendar } from "lucide-react";
 import { useGamification } from "@/hooks/useGamification";
 
 interface GoalsManagerProps {
@@ -216,8 +216,64 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
     await loadGoals();
   };
 
+  // Calculate summary stats
+  const inProgressGoals = goals.filter(g => g.status !== "completed");
+  const completedGoals = goals.filter(g => g.status === "completed");
+  const totalTargetValue = goals.reduce((sum, g) => sum + Number(g.target_value), 0);
+  const totalCurrentValue = goals.reduce((sum, g) => sum + Number(g.current_value), 0);
+  const overallProgress = totalTargetValue > 0 ? (totalCurrentValue / totalTargetValue) * 100 : 0;
+  const nextDeadline = inProgressGoals
+    .filter(g => g.deadline)
+    .sort((a, b) => (a.deadline || "").localeCompare(b.deadline || ""))[0];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      {/* Summary Card */}
+      <Card className="border-2 shadow-lg bg-gradient-to-r from-primary/5 to-brand-magenta/5">
+        <CardContent className="py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Target className="h-4 w-4 text-brand-blue" />
+                <span className="text-xl font-bold text-brand-blue">{inProgressGoals.length}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Metas Ativas</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-xl font-bold text-green-600">{completedGoals.length}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Concluídas</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-foreground">
+                R$ {totalTargetValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground">Valor Total</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <TrendingUp className="h-4 w-4 text-brand-magenta" />
+                <span className="text-xl font-bold text-brand-magenta">{overallProgress.toFixed(0)}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Progresso Geral</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-bold text-foreground">
+                  {nextDeadline?.deadline 
+                    ? new Date(nextDeadline.deadline).toLocaleDateString("pt-BR") 
+                    : "-"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">Próx. Prazo</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Edit Goal Dialog */}
       <Dialog open={!!editingGoal} onOpenChange={(open) => !open && setEditingGoal(null)}>
         <DialogContent className="max-w-md">
@@ -277,7 +333,8 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
         </DialogContent>
       </Dialog>
 
-      <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
         <CardHeader>
           <CardTitle className="text-brand-blue">Criar Nova Meta</CardTitle>
           <CardDescription>Defina seus objetivos financeiros</CardDescription>
@@ -457,6 +514,7 @@ export function GoalsManager({ userId }: GoalsManagerProps) {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

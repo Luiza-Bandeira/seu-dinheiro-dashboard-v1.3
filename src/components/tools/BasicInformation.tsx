@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, CreditCard, Building2, Wallet, AlertCircle, CheckCircle, Clock, Pencil } from "lucide-react";
+import { Plus, Trash2, CreditCard, Building2, Wallet, AlertCircle, CheckCircle, Clock, Pencil, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 interface BasicInformationProps {
   userId: string;
@@ -743,7 +743,58 @@ export function BasicInformation({
           </div>
         </TabsContent>
 
-        <TabsContent value="payable" className="mt-6">
+        <TabsContent value="payable" className="mt-6 space-y-4">
+          {/* Summary Card for Payable */}
+          {(() => {
+            const today = new Date().toISOString().split("T")[0];
+            const pendingDebts = debtsPayable.filter(d => d.status === "pending");
+            const totalPending = pendingDebts.reduce((sum, d) => sum + Number(d.amount), 0);
+            const overdueDebts = pendingDebts.filter(d => d.due_date < today);
+            const nextDue = pendingDebts.sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+            const paidThisMonth = debtsPayable.filter(d => {
+              if (d.status !== "paid" || !d.paid_at) return false;
+              const paidDate = new Date(d.paid_at);
+              const now = new Date();
+              return paidDate.getMonth() === now.getMonth() && paidDate.getFullYear() === now.getFullYear();
+            }).reduce((sum, d) => sum + Number(d.amount), 0);
+
+            return (
+              <Card className="border-2 shadow-lg bg-gradient-to-r from-red-50/50 to-orange-50/50">
+                <CardContent className="py-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <ArrowUpRight className="h-4 w-4 text-red-500" />
+                        <span className="text-xl font-bold text-red-600">
+                          R$ {totalPending.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Total Pendente</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-orange-600">{overdueDebts.length}</p>
+                      <p className="text-xs text-muted-foreground">Atrasadas</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-foreground">
+                        {nextDue ? new Date(nextDue.due_date).toLocaleDateString("pt-BR") : "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Próx. Vencimento</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-xl font-bold text-green-600">
+                          R$ {paidThisMonth.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Pago este mês</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="border-2 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-destructive/5 to-destructive/10">
@@ -836,7 +887,58 @@ export function BasicInformation({
           </div>
         </TabsContent>
 
-        <TabsContent value="receivable" className="mt-6">
+        <TabsContent value="receivable" className="mt-6 space-y-4">
+          {/* Summary Card for Receivable */}
+          {(() => {
+            const today = new Date().toISOString().split("T")[0];
+            const pendingReceivables = debtsReceivable.filter(d => d.status === "pending");
+            const totalPending = pendingReceivables.reduce((sum, d) => sum + Number(d.amount), 0);
+            const overdueReceivables = pendingReceivables.filter(d => d.due_date < today);
+            const nextDue = pendingReceivables.sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+            const receivedThisMonth = debtsReceivable.filter(d => {
+              if (d.status !== "received" || !d.received_at) return false;
+              const receivedDate = new Date(d.received_at);
+              const now = new Date();
+              return receivedDate.getMonth() === now.getMonth() && receivedDate.getFullYear() === now.getFullYear();
+            }).reduce((sum, d) => sum + Number(d.amount), 0);
+
+            return (
+              <Card className="border-2 shadow-lg bg-gradient-to-r from-green-50/50 to-emerald-50/50">
+                <CardContent className="py-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <ArrowDownLeft className="h-4 w-4 text-green-500" />
+                        <span className="text-xl font-bold text-green-600">
+                          R$ {totalPending.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Total a Receber</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-orange-600">{overdueReceivables.length}</p>
+                      <p className="text-xs text-muted-foreground">Atrasados</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-foreground">
+                        {nextDue ? new Date(nextDue.due_date).toLocaleDateString("pt-BR") : "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Próx. Recebimento</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-xl font-bold text-green-600">
+                          R$ {receivedThisMonth.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Recebido este mês</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="border-2 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">

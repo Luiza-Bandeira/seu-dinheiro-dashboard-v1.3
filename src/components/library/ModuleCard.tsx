@@ -53,24 +53,35 @@ export function ModuleCard({ module, userId, index }: ModuleCardProps) {
     setProgress(progressPercentage);
   };
 
+  // Check if this is the bonus module (Encontros ao Vivo)
+  const isBonus = module.order_index === 6 || module.title.toLowerCase().includes('bônus') || module.title.toLowerCase().includes('bonus');
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
     >
-      <Card className="hover:shadow-lg transition-shadow">
+      <Card className={`hover:shadow-lg transition-shadow ${isBonus ? 'border-2 border-brand-magenta/30 bg-gradient-to-br from-background to-brand-pink/5' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
-          <Badge variant="secondary" className="mb-2">
-              Módulo {module.order_index}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {isBonus ? (
+                <Badge className="mb-2 bg-brand-magenta">
+                  ⭐ Bônus
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="mb-2">
+                  Semana {module.order_index}
+                </Badge>
+              )}
+            </div>
             {progress === 100 && (
               <Badge className="bg-green-600">Completo</Badge>
             )}
           </div>
-          <CardTitle className="text-brand-blue">{module.title}</CardTitle>
-          <CardDescription>{module.description}</CardDescription>
+          <CardTitle className={`${isBonus ? 'text-brand-magenta' : 'text-brand-blue'}`}>{module.title}</CardTitle>
+          <CardDescription className="line-clamp-2">{module.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -84,7 +95,7 @@ export function ModuleCard({ module, userId, index }: ModuleCardProps) {
           </div>
 
           <Button 
-            className="w-full" 
+            className={`w-full ${isBonus ? 'bg-brand-magenta hover:bg-brand-magenta/90' : ''}`}
             variant="default"
             onClick={() => navigate(`/library/${module.id}`)}
           >

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Video, FileText, PenTool, CheckSquare, Sparkles, ExternalLink, Play, X } from "lucide-react";
+import { ArrowLeft, Video, FileText, PenTool, CheckSquare, Sparkles, ExternalLink, Play, X, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
@@ -80,6 +80,7 @@ export default function ModuleDetail() {
   const [loading, setLoading] = useState(true);
   const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<Content | null>(null);
+  const [encontro2Completed, setEncontro2Completed] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -139,6 +140,25 @@ export default function ModuleDetail() {
         progressRecord[p.content_id] = p.completed;
       });
       setProgressMap(progressRecord);
+
+      // Check if "Encontro 2" is completed (for conditional release of Sessão Individual 1)
+      const { data: encontro2Content } = await supabase
+        .from("contents")
+        .select("id")
+        .ilike("title", "%Encontro 2%")
+        .single();
+
+      if (encontro2Content) {
+        const { data: encontro2Progress } = await supabase
+          .from("progress")
+          .select("completed")
+          .eq("user_id", user.id)
+          .eq("content_id", encontro2Content.id)
+          .eq("completed", true)
+          .maybeSingle();
+
+        setEncontro2Completed(!!encontro2Progress);
+      }
     } catch (error) {
       console.error("Error loading module:", error);
       toast.error("Erro ao carregar módulo");
@@ -331,6 +351,15 @@ export default function ModuleDetail() {
                 const Icon = config.icon;
                 const isCompleted = progressMap[content.id] || false;
                 const isUpdating = updatingProgress === content.id;
+                
+                // Check if this is "Sessão Individual 1" and if it's locked
+                const isSessaoIndividual1 = content.title.toLowerCase().includes("sessão individual 1") || 
+                                            content.title.toLowerCase().includes("sessao individual 1");
+                const isLocked = isSessaoIndividual1 && !encontro2Completed;
+
+                // Special styling for individual sessions
+                const isSessaoIndividual = content.title.toLowerCase().includes("sessão individual") || 
+                                           content.title.toLowerCase().includes("sessao individual");
 
                 return (
                   <motion.div
@@ -339,33 +368,56 @@ export default function ModuleDetail() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                   >
-                    <Card className={`transition-all ${isCompleted ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'hover:shadow-md'}`}>
+                    <Card className={`transition-all ${
+                      isLocked 
+                        ? 'bg-muted/50 border-muted opacity-70' 
+                        : isCompleted 
+                          ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                          : isSessaoIndividual
+                            ? 'bg-gradient-to-r from-brand-magenta/5 to-brand-pink/10 border-brand-magenta/30 hover:shadow-md'
+                            : 'hover:shadow-md'
+                    }`}>
                       <CardContent className="py-4">
                         <div className="flex items-center gap-4">
-                          {/* Checkbox */}
-                          <Checkbox
-                            checked={isCompleted}
-                            disabled={isUpdating}
-                            onCheckedChange={() => toggleContentProgress(content.id, isCompleted)}
-                            className="h-5 w-5"
-                          />
+                          {/* Checkbox or Lock */}
+                          {isLocked ? (
+                            <div className="h-5 w-5 flex items-center justify-center">
+                              <Lock className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <Checkbox
+                              checked={isCompleted}
+                              disabled={isUpdating}
+                              onCheckedChange={() => toggleContentProgress(content.id, isCompleted)}
+                              className="h-5 w-5"
+                            />
+                          )}
 
                           {/* Icon */}
-                          <div className={`p-2 rounded-lg bg-muted ${config.color}`}>
+                          <div className={`p-2 rounded-lg ${isLocked ? 'bg-muted' : isSessaoIndividual ? 'bg-brand-magenta/10' : 'bg-muted'} ${isLocked ? 'text-muted-foreground' : config.color}`}>
                             <Icon className="h-5 w-5" />
                           </div>
 
                           {/* Content info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {config.label}
+                              <Badge variant={isSessaoIndividual && !isLocked ? "default" : "outline"} className={`text-xs ${isSessaoIndividual && !isLocked ? 'bg-brand-magenta' : ''}`}>
+                                {isSessaoIndividual ? 'Sessão Individual' : config.label}
                               </Badge>
+                              {isLocked && (
+                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                                  🔒 Bloqueado
+                                </Badge>
+                              )}
                             </div>
-                            <h4 className={`font-medium mt-1 ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                            <h4 className={`font-medium mt-1 ${isLocked ? 'text-muted-foreground' : isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                               {content.title}
                             </h4>
-                            {content.description && (
+                            {isLocked ? (
+                              <p className="text-sm text-amber-600 mt-1">
+                                ⏳ Disponível após completar o Encontro ao Vivo 2
+                              </p>
+                            ) : content.description && (
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {content.description}
                               </p>
@@ -373,16 +425,22 @@ export default function ModuleDetail() {
                           </div>
 
                           {/* Action button */}
-                          {content.url && (
+                          {content.url && !isLocked && (
                             <Button
-                              variant="outline"
+                              variant={isSessaoIndividual ? "default" : "outline"}
                               size="sm"
                               onClick={() => openContent(content)}
+                              className={isSessaoIndividual ? 'bg-brand-magenta hover:bg-brand-magenta/90' : ''}
                             >
                               {content.type === "video" && isVideoUrl(content.url) ? (
                                 <>
                                   <Play className="h-4 w-4 mr-2" />
                                   Reproduzir
+                                </>
+                              ) : isSessaoIndividual ? (
+                                <>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Agendar
                                 </>
                               ) : (
                                 <>

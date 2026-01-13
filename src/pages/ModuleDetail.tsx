@@ -384,9 +384,15 @@ export default function ModuleDetail() {
             <Card className="border-2 border-primary/20">
               <CardHeader>
                 <div className="flex items-center gap-3 mb-2">
-                  <Badge variant="secondary" className="text-sm">
-                    Módulo {module.order_index + 1}
-                  </Badge>
+                  {module.order_index <= 5 ? (
+                    <Badge variant="secondary" className="text-sm">
+                      Módulo {module.order_index}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-brand-magenta text-sm">
+                      ⭐ Bônus
+                    </Badge>
+                  )}
                   {progressPercentage === 100 && (
                     <Badge className="bg-green-600 text-white">Completo</Badge>
                   )}

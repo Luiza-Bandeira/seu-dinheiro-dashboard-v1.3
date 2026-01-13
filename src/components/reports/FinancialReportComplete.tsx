@@ -147,10 +147,10 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
     const currentMonthKey = today.toISOString().slice(0, 7);
     const months: { [key: string]: { receitas: number; despesas: number; isFuture: boolean } } = {};
     
+    const now = new Date(today.getFullYear(), today.getMonth(), 1, 12, 0, 0);
     for (let i = -3; i <= 2; i++) {
-      const date = new Date(today);
-      date.setMonth(today.getMonth() + i);
-      const monthKey = date.toISOString().slice(0, 7);
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1, 12, 0, 0);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       months[monthKey] = { receitas: 0, despesas: 0, isFuture: i > 0 };
     }
 
@@ -212,8 +212,9 @@ export function FinancialReportComplete({ userId }: FinancialReportCompleteProps
 
     const evolutionData = Object.entries(months)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, values]) => {
-        const date = new Date(month + "-01");
+      .map(([monthStr, values]) => {
+        const [year, monthNum] = monthStr.split("-");
+        const date = new Date(parseInt(year), parseInt(monthNum) - 1, 1, 12, 0, 0);
         return {
           month: date.toLocaleDateString("pt-BR", { month: "short" }),
           ...values,

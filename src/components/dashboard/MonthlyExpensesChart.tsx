@@ -63,7 +63,7 @@ export function MonthlyExpensesChart({ userId, refreshKey }: MonthlyExpensesChar
 
     // Aggregate data
     finances?.forEach((finance) => {
-      const date = new Date(finance.date);
+      const date = new Date(finance.date + "T12:00:00");
       const monthKey = date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
       
       if (monthlyMap.has(monthKey)) {
@@ -176,13 +176,13 @@ export function MonthlyExpensesChart({ userId, refreshKey }: MonthlyExpensesChar
                 <Bar 
                   dataKey="receitas" 
                   name="Receitas" 
-                  fill="hsl(var(--chart-2))" 
+                  fill="#22c55e" 
                   radius={[4, 4, 0, 0]}
                 />
                 <Bar 
                   dataKey="despesas" 
                   name="Despesas" 
-                  fill="hsl(var(--chart-1))" 
+                  fill="#ef137c" 
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

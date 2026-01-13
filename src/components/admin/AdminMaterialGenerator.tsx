@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { FileText, Download, Eye, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { FileText, Download, CheckCircle2, Clock, RefreshCw, Save, Copy, Link } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   generateChecklistPDF,
@@ -236,14 +237,14 @@ const MATERIAL_DATA = {
   "Calendário de Revisão Mensal": {
     type: "calendar",
     weeklyTasks: [
-      "Sexta-feira: Registrar gastos da semana (📊)",
+      "Sexta-feira: Registrar gastos da semana",
     ],
     biweeklyTasks: [
-      "Dia 15: Revisar orçamento quinzenal",
+      "Dia 15: Revisar orcamento quinzenal",
     ],
     monthlyTasks: [
-      "Dia 28: Revisão de metas (🎯)",
-      "Dia 30: Fechamento mensal (📈)",
+      "Dia 28: Revisao de metas",
+      "Dia 30: Fechamento mensal",
       "Atualizar planilha de investimentos",
       "Verificar progresso dos objetivos",
     ],
@@ -293,10 +294,21 @@ export function AdminMaterialGenerator() {
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [savingUrl, setSavingUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadContents();
   }, []);
+
+  // Inicializar URLs quando contents carregar
+  useEffect(() => {
+    const initialUrls: Record<string, string> = {};
+    contents.forEach(c => {
+      initialUrls[c.id] = c.url || "";
+    });
+    setUrls(initialUrls);
+  }, [contents]);
 
   const loadContents = async () => {
     setLoading(true);
@@ -315,9 +327,42 @@ export function AdminMaterialGenerator() {
   };
 
   const getModuleName = (moduleId: string | null) => {
-    if (!moduleId) return "Sem módulo";
+    if (!moduleId) return "Sem modulo";
     const module = modules.find((m) => m.id === moduleId);
-    return module ? module.title : "Módulo desconhecido";
+    return module ? module.title : "Modulo desconhecido";
+  };
+
+  const saveUrl = async (contentId: string) => {
+    setSavingUrl(contentId);
+    const url = urls[contentId]?.trim() || null;
+    
+    const { error } = await supabase
+      .from("contents")
+      .update({ url })
+      .eq("id", contentId);
+      
+    if (error) {
+      toast({
+        title: "Erro ao salvar URL",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "URL salva!",
+        description: "A biblioteca foi atualizada automaticamente.",
+      });
+      await loadContents();
+    }
+    setSavingUrl(null);
+  };
+
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "URL copiada!",
+      description: "A URL foi copiada para a area de transferencia.",
+    });
   };
 
   const generatePDF = async (content: Content) => {
@@ -465,53 +510,91 @@ export function AdminMaterialGenerator() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center justify-between p-4 border rounded-xl bg-card hover:shadow-md transition-shadow"
+                className="p-4 border rounded-xl bg-card hover:shadow-md transition-shadow space-y-3"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">{content.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {getModuleName(content.module_id)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium">{content.title}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {getModuleName(content.module_id)}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      variant="outline"
+                      className={
+                        content.url
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                      }
+                    >
+                      {content.url ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          URL salva
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-3 w-3 mr-1" />
+                          Sem URL
+                        </>
+                      )}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => generatePDF(content)}
+                      disabled={generating === content.id}
+                      className="gap-2"
+                    >
+                      {generating === content.id ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      Gerar PDF
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="outline"
-                    className={
-                      content.url
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                    }
-                  >
-                    {content.url ? (
-                      <>
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        URL definida
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-3 w-3 mr-1" />
-                        Sem URL
-                      </>
-                    )}
-                  </Badge>
+                
+                {/* Campo de URL */}
+                <div className="flex items-center gap-2 pl-14">
+                  <div className="flex-1 relative">
+                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cole a URL do PDF (Google Drive, etc.)"
+                      value={urls[content.id] || ""}
+                      onChange={(e) => setUrls(prev => ({ ...prev, [content.id]: e.target.value }))}
+                      className="pl-9 text-sm"
+                    />
+                  </div>
+                  {urls[content.id] && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyUrl(urls[content.id])}
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={() => generatePDF(content)}
-                    disabled={generating === content.id}
-                    className="gap-2"
+                    onClick={() => saveUrl(content.id)}
+                    disabled={savingUrl === content.id || urls[content.id] === (content.url || "")}
+                    className="gap-2 shrink-0"
                   >
-                    {generating === content.id ? (
+                    {savingUrl === content.id ? (
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Download className="h-4 w-4" />
+                      <Save className="h-4 w-4" />
                     )}
-                    Gerar PDF
+                    Salvar URL
                   </Button>
                 </div>
               </motion.div>
@@ -544,24 +627,21 @@ export function AdminMaterialGenerator() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-brand-blue">Instruções</CardTitle>
+          <CardTitle className="text-brand-blue">Instrucoes</CardTitle>
         </CardHeader>
         <CardContent className="prose prose-sm max-w-none">
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>
-              Clique em <strong>"Gerar PDF"</strong> para baixar cada material individualmente
+              Clique em <strong>"Gerar PDF"</strong> para baixar cada material
             </li>
             <li>
-              Ou clique em <strong>"Gerar Todos"</strong> para baixar todos de uma vez
+              Faca upload do PDF para o Google Drive e copie o link de compartilhamento
             </li>
             <li>
-              Os PDFs são gerados com a identidade visual Economiza (cores, logo, layout)
+              Cole a URL no campo correspondente e clique em <strong>"Salvar URL"</strong>
             </li>
             <li>
-              Após gerar, você pode fazer upload para o Google Drive ou outro serviço
-            </li>
-            <li>
-              Atualize a URL do conteúdo na aba <strong>Biblioteca</strong> para disponibilizar aos alunos
+              A biblioteca sera atualizada automaticamente e os alunos poderao acessar
             </li>
           </ol>
         </CardContent>

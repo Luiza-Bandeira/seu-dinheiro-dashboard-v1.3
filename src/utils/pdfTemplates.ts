@@ -290,7 +290,7 @@ export const generateScriptPDF = (
       doc.setTextColor(BRAND_MAGENTA_RGB[0], BRAND_MAGENTA_RGB[1], BRAND_MAGENTA_RGB[2]);
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.text("💡 Dicas:", 14, yPos);
+      doc.text("Dicas:", 14, yPos);
       yPos += 6;
       
       scriptItem.tips.forEach((tip) => {
@@ -429,7 +429,7 @@ export const generateAlertGuidePDF = (
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text(`⚠️ ${level.level}`, 20, yPos);
+    doc.text(level.level, 20, yPos);
     yPos += 12;
     
     // Items
@@ -457,7 +457,7 @@ export const generateAlertGuidePDF = (
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("✅ O QUE FAZER", 20, yPos);
+  doc.text("O QUE FAZER", 20, yPos);
   yPos += 12;
   
   whatToDo.forEach((item, index) => {
@@ -496,7 +496,7 @@ export const generateCalendarPDF = (
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("📅 TODA SEMANA", 20, yPos);
+  doc.text("TODA SEMANA", 20, yPos);
   yPos += 14;
   
   weeklyTasks.forEach((task) => {
@@ -517,7 +517,7 @@ export const generateCalendarPDF = (
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("📅 TODA QUINZENA", 20, yPos);
+  doc.text("A CADA QUINZENA", 20, yPos);
   yPos += 14;
   
   biweeklyTasks.forEach((task) => {
@@ -538,7 +538,7 @@ export const generateCalendarPDF = (
   doc.setTextColor(BRAND_BLUE_RGB[0], BRAND_BLUE_RGB[1], BRAND_BLUE_RGB[2]);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("📅 TODO MÊS", 20, yPos);
+  doc.text("TODO MES", 20, yPos);
   yPos += 14;
   
   monthlyTasks.forEach((task) => {

@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift, ClipboardList } from "lucide-react";
+import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift, ClipboardList, Files } from "lucide-react";
 import { exportToPDF, exportToCSV, exportToXLSX, formatCurrency, formatPercentage } from "@/utils/exportUtils";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminLibraryManager } from "@/components/admin/AdminLibraryManager";
 import { AdminUserManager } from "@/components/admin/AdminUserManager";
 import { AdminRewardsManager } from "@/components/admin/AdminRewardsManager";
 import { AdminCourseScripts } from "@/components/admin/AdminCourseScripts";
+import { AdminMaterialGenerator } from "@/components/admin/AdminMaterialGenerator";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/components/ui/use-toast";
@@ -477,7 +478,7 @@ export default function AdminAnalytics() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-9">
               <TabsTrigger value="users" className="flex items-center gap-1">
                 <UserPlus className="h-4 w-4" />
                 <span className="hidden sm:inline">Usuários</span>
@@ -492,6 +493,10 @@ export default function AdminAnalytics() {
               <TabsTrigger value="library" className="flex items-center gap-1">
                 <BookOpen className="h-4 w-4" />
                 <span className="hidden sm:inline">Biblioteca</span>
+              </TabsTrigger>
+              <TabsTrigger value="materials" className="flex items-center gap-1">
+                <Files className="h-4 w-4" />
+                <span className="hidden sm:inline">Materiais</span>
               </TabsTrigger>
               <TabsTrigger value="rewards" className="flex items-center gap-1">
                 <Gift className="h-4 w-4" />
@@ -696,6 +701,10 @@ export default function AdminAnalytics() {
 
             <TabsContent value="library" className="mt-6">
               <AdminLibraryManager />
+            </TabsContent>
+
+            <TabsContent value="materials" className="mt-6">
+              <AdminMaterialGenerator />
             </TabsContent>
 
             <TabsContent value="users" className="mt-6">

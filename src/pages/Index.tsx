@@ -85,7 +85,7 @@ const Index = () => {
   ];
 
   const valueItems = [
-    { title: "3 Sessões individuais", subtitle: "(R$ 500 cada)", price: "R$ 1.500" },
+    { title: "Sessões individuais de aplicação estratégica", subtitle: "Análise do seu cenário real e aplicação personalizada do método para resolver o seu problema financeiro específico.", price: "R$ 1.500" },
     { title: "Encontros ao vivo durante o programa", subtitle: "Para tirar dúvidas com exemplos reais", price: "R$ 997" },
     { title: "Suporte via WhatsApp por 1 ano", subtitle: "Acompanhamento contínuo", price: "R$ 1.200" },
     { title: "Ferramentas e materiais exclusivos", subtitle: "Planilhas, templates e guias práticos", price: "R$ 1.200" },

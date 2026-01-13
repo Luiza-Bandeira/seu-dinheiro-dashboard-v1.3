@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift } from "lucide-react";
+import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift, ClipboardList } from "lucide-react";
 import { exportToPDF, exportToCSV, exportToXLSX, formatCurrency, formatPercentage } from "@/utils/exportUtils";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminLibraryManager } from "@/components/admin/AdminLibraryManager";
 import { AdminUserManager } from "@/components/admin/AdminUserManager";
 import { AdminRewardsManager } from "@/components/admin/AdminRewardsManager";
+import { AdminCourseScripts } from "@/components/admin/AdminCourseScripts";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/components/ui/use-toast";
@@ -476,7 +477,7 @@ export default function AdminAnalytics() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
               <TabsTrigger value="users" className="flex items-center gap-1">
                 <UserPlus className="h-4 w-4" />
                 <span className="hidden sm:inline">Usuários</span>
@@ -495,6 +496,10 @@ export default function AdminAnalytics() {
               <TabsTrigger value="rewards" className="flex items-center gap-1">
                 <Gift className="h-4 w-4" />
                 <span className="hidden sm:inline">Brindes</span>
+              </TabsTrigger>
+              <TabsTrigger value="scripts" className="flex items-center gap-1">
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Roteiros</span>
               </TabsTrigger>
             </TabsList>
 
@@ -699,6 +704,10 @@ export default function AdminAnalytics() {
 
             <TabsContent value="rewards" className="mt-6">
               <AdminRewardsManager />
+            </TabsContent>
+
+            <TabsContent value="scripts" className="mt-6">
+              <AdminCourseScripts />
             </TabsContent>
           </Tabs>
         </motion.div>

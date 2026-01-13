@@ -5,6 +5,8 @@ import { User } from "@supabase/supabase-js";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ModuleCard } from "@/components/library/ModuleCard";
+import { LibraryStats } from "@/components/library/LibraryStats";
+import { RecentContent } from "@/components/dashboard/RecentContent";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 
@@ -92,24 +94,36 @@ export default function Library() {
               </p>
             </div>
 
-            {modules.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground text-lg">
-                  Nenhum módulo disponível no momento.
-                </p>
+            {/* Course Progress Stats */}
+            <LibraryStats userId={user?.id || ""} />
+
+            {/* Recent Content and Modules */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <RecentContent userId={user?.id || ""} />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {modules.map((module, index) => (
-                  <ModuleCard
-                    key={module.id}
-                    module={module}
-                    userId={user?.id || ""}
-                    index={index}
-                  />
-                ))}
+              
+              <div className="lg:col-span-3">
+                {modules.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground text-lg">
+                      Nenhum módulo disponível no momento.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {modules.map((module, index) => (
+                      <ModuleCard
+                        key={module.id}
+                        module={module}
+                        userId={user?.id || ""}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </motion.div>
       </main>

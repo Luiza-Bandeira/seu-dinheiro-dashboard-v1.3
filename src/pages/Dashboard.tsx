@@ -4,10 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { RecentContent } from "@/components/dashboard/RecentContent";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory";
+import { MonthlyExpensesChart } from "@/components/dashboard/MonthlyExpensesChart";
 import { ReductionGoalsWidget } from "@/components/dashboard/ReductionGoalsWidget";
 import { GoalsWidget } from "@/components/dashboard/GoalsWidget";
 import { DebtsWidget } from "@/components/dashboard/DebtsWidget";
@@ -168,12 +167,10 @@ export default function Dashboard() {
               </Dialog>
             )}
 
-            <DashboardStats userId={user?.id || ""} />
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <RecentContent userId={user?.id || ""} />
               <FinancialSummary userId={user?.id || ""} refreshKey={refreshKey} />
               <ExpensesByCategory userId={user?.id || ""} refreshKey={refreshKey} />
+              <MonthlyExpensesChart userId={user?.id || ""} refreshKey={refreshKey} />
             </div>
 
             <ReductionGoalsWidget userId={user?.id || ""} />

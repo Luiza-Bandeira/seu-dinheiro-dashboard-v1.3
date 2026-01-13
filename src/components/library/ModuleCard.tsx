@@ -71,9 +71,9 @@ export function ModuleCard({ module, userId, index }: ModuleCardProps) {
                   ⭐ Bônus
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="mb-2">
-                  Semana {module.order_index}
-                </Badge>
+              <Badge variant="secondary" className="mb-2">
+                Módulo {module.order_index}
+              </Badge>
               )}
             </div>
             {progress === 100 && (

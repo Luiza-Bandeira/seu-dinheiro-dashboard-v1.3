@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Video, FileText, PenTool, CheckSquare, Sparkles, ExternalLink, Play, X, Lock } from "lucide-react";
+import { ArrowLeft, Video, FileText, PenTool, CheckSquare, Sparkles, ExternalLink, Play, Lock, Download, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
@@ -35,9 +35,55 @@ const getVimeoVideoId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Helper to extract Google Drive file ID
+const getGoogleDriveFileId = (url: string): string | null => {
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^\/]+)/,
+    /drive\.google\.com\/open\?id=([^&]+)/,
+    /docs\.google\.com\/.*\/d\/([^\/]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
 // Helper to check if URL is a video
 const isVideoUrl = (url: string): boolean => {
-  return !!getYouTubeVideoId(url) || !!getVimeoVideoId(url);
+  if (getYouTubeVideoId(url) || getVimeoVideoId(url)) return true;
+  // Check for Google Drive video (common video extensions or /file/d/ pattern)
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId && (url.includes('/file/d/') || url.includes('video'))) return true;
+  return false;
+};
+
+// Helper to check if URL is a PDF
+const isPdfUrl = (url: string): boolean => {
+  if (url.toLowerCase().includes('.pdf')) return true;
+  // Google Drive PDF detection
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId) return true; // Assume Drive files could be PDFs if type is pdf
+  return false;
+};
+
+// Get PDF viewer URL (for embedding)
+const getPdfViewerUrl = (url: string): string => {
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId) {
+    return `https://drive.google.com/file/d/${driveId}/preview`;
+  }
+  // For direct PDF URLs, use Google Docs Viewer
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+};
+
+// Get PDF download URL
+const getPdfDownloadUrl = (url: string): string => {
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId) {
+    return `https://drive.google.com/uc?export=download&id=${driveId}`;
+  }
+  return url;
 };
 
 interface Module {
@@ -80,6 +126,7 @@ export default function ModuleDetail() {
   const [loading, setLoading] = useState(true);
   const [updatingProgress, setUpdatingProgress] = useState<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<Content | null>(null);
+  const [activePdf, setActivePdf] = useState<Content | null>(null);
   const [encontro2Completed, setEncontro2Completed] = useState(false);
 
   useEffect(() => {
@@ -217,18 +264,40 @@ export default function ModuleDetail() {
   const totalCount = contents.length;
   const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const openContent = (content: Content) => {
+  const openContent = (content: Content, action: 'view' | 'download' = 'view') => {
     if (!content.url) {
       toast.info("Este conteúdo não possui um link associado");
       return;
     }
 
-    // Check if it's a video type with embeddable URL
+    // Handle videos
     if (content.type === "video" && isVideoUrl(content.url)) {
       setActiveVideo(content);
-    } else {
-      window.open(content.url, "_blank");
+      return;
     }
+
+    // Handle PDFs
+    if (content.type === "pdf") {
+      if (action === 'download') {
+        downloadPdf(content.url, content.title);
+      } else {
+        setActivePdf(content);
+      }
+      return;
+    }
+
+    // Default: open in new tab
+    window.open(content.url, "_blank");
+  };
+
+  const downloadPdf = (url: string, title: string) => {
+    const downloadUrl = getPdfDownloadUrl(url);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${title}.pdf`;
+    link.target = '_blank';
+    link.click();
+    toast.success("Download iniciado!");
   };
 
   const getEmbedUrl = (url: string): string | null => {
@@ -240,6 +309,12 @@ export default function ModuleDetail() {
     const vimeoId = getVimeoVideoId(url);
     if (vimeoId) {
       return `https://player.vimeo.com/video/${vimeoId}?autoplay=1`;
+    }
+    
+    // Google Drive video
+    const driveId = getGoogleDriveFileId(url);
+    if (driveId) {
+      return `https://drive.google.com/file/d/${driveId}/preview`;
     }
     
     return null;
@@ -424,31 +499,69 @@ export default function ModuleDetail() {
                             )}
                           </div>
 
-                          {/* Action button */}
+                          {/* Action buttons */}
                           {content.url && !isLocked && (
-                            <Button
-                              variant={isSessaoIndividual ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => openContent(content)}
-                              className={isSessaoIndividual ? 'bg-brand-magenta hover:bg-brand-magenta/90' : ''}
-                            >
-                              {content.type === "video" && isVideoUrl(content.url) ? (
-                                <>
+                            <div className="flex items-center gap-2">
+                              {/* Video button */}
+                              {content.type === "video" && isVideoUrl(content.url) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openContent(content)}
+                                >
                                   <Play className="h-4 w-4 mr-2" />
-                                  Reproduzir
-                                </>
-                              ) : isSessaoIndividual ? (
+                                  Assistir
+                                </Button>
+                              )}
+                              
+                              {/* PDF buttons */}
+                              {content.type === "pdf" && (
                                 <>
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Agendar
-                                </>
-                              ) : (
-                                <>
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Abrir
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => openContent(content, 'download')}
+                                    className="bg-brand-blue hover:bg-brand-blue/90"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Baixar
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openContent(content, 'view')}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Visualizar
+                                  </Button>
                                 </>
                               )}
-                            </Button>
+                              
+                              {/* Sessão Individual button */}
+                              {isSessaoIndividual && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => openContent(content)}
+                                  className="bg-brand-magenta hover:bg-brand-magenta/90"
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Agendar
+                                </Button>
+                              )}
+                              
+                              {/* Default button for other types */}
+                              {content.type !== "video" && content.type !== "pdf" && !isSessaoIndividual && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openContent(content)}
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Abrir
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -483,6 +596,53 @@ export default function ModuleDetail() {
           {activeVideo?.description && (
             <div className="p-4 pt-2 text-sm text-muted-foreground">
               {activeVideo.description}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={!!activePdf} onOpenChange={(open) => !open && setActivePdf(null)}>
+        <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 pb-2 shrink-0 border-b">
+            <div className="flex items-center justify-between pr-8">
+              <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5 text-brand-blue" />
+                {activePdf?.title}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => activePdf?.url && downloadPdf(activePdf.url, activePdf.title)}
+                  className="bg-brand-blue hover:bg-brand-blue/90"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => activePdf?.url && window.open(activePdf.url, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Abrir em Nova Aba
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 bg-muted">
+            {activePdf?.url && (
+              <iframe
+                src={getPdfViewerUrl(activePdf.url)}
+                className="w-full h-full border-0"
+                title={activePdf.title}
+              />
+            )}
+          </div>
+          {activePdf?.description && (
+            <div className="p-4 pt-2 text-sm text-muted-foreground border-t shrink-0">
+              {activePdf.description}
             </div>
           )}
         </DialogContent>

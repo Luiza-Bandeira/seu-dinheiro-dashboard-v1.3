@@ -34,20 +34,111 @@ interface Module {
 }
 
 // Material data definitions
-const MATERIAL_DATA = {
+const MATERIAL_DATA: Record<string, any> = {
+  // Material externo - Documento Base
+  "Documento Base (PDF)": {
+    type: "external",
+    defaultUrl: "https://drive.google.com/file/d/1--TO1PiITiwpUv_fjEHlcuHTvWg_chLK/view?usp=sharing",
+  },
+  // Checklist expandido
   "Checklist de Documentos Necessários": {
     type: "checklist",
     items: [
-      "Extratos bancários dos últimos 3 meses",
-      "Faturas de cartão de crédito (últimos 3 meses)",
-      "Comprovantes de renda (contracheques, pró-labore)",
-      "Boletos de contas fixas (aluguel, água, luz, internet)",
-      "Contratos de empréstimos ou financiamentos",
-      "Lista de aplicações financeiras (se houver)",
-      "Anotações de gastos em dinheiro",
+      "=== DOCUMENTOS BANCARIOS ===",
+      "Extratos das contas correntes (ultimos 3 meses)",
+      "Extratos das contas poupanca (ultimos 3 meses)",
+      "Extratos de investimentos (CDBs, fundos, acoes)",
+      "",
+      "=== CARTOES DE CREDITO ===",
+      "Faturas recentes de todos os cartoes que utiliza",
+      "Lista de compras parceladas em andamento",
+      "Limite disponivel em cada cartao",
+      "",
+      "=== COMPROVANTES DE RENDA ===",
+      "Contracheques dos ultimos 3 meses",
+      "Pro-labore ou recibos de autonomo",
+      "Comprovantes de rendimentos extras (freelance, aluguel)",
+      "",
+      "=== COMPROMISSOS FINANCEIROS ===",
+      "Contratos de financiamento (imovel, veiculo)",
+      "Contratos de consorcios",
+      "Contratos de emprestimos pessoais",
+      "Boletos de carnes em aberto",
+      "",
+      "=== IMPOSTOS E TAXAS ANUAIS ===",
+      "Ultimo IPVA pago",
+      "Ultimo IPTU pago",
+      "Declaracao do Imposto de Renda (ano anterior)",
+      "Guia de pagamento do IRPF (restituicao ou a pagar)",
+      "",
+      "=== CONTAS FIXAS MENSAIS ===",
+      "Boletos de aluguel ou prestacao do imovel",
+      "Contas de agua, luz, gas",
+      "Internet e telefone",
+      "Planos de saude",
+      "Seguros (vida, residencial, auto)",
+      "",
+      "=== ASSINATURAS E SERVICOS ===",
+      "Lista de assinaturas de streaming",
+      "Mensalidades de academia, cursos, clubes",
+      "Planos de celular",
+      "Aplicativos com cobranca recorrente",
+      "",
+      "=== OUTROS DOCUMENTOS ===",
       "Login e senha do internet banking",
-      "Extrato do FGTS (se aplicável)",
-      "Declaração do IR do ano anterior",
+      "Extrato do FGTS (se aplicavel)",
+      "Anotacoes de gastos em dinheiro",
+      "Contratos de pensao alimenticia (se aplicavel)",
+    ],
+  },
+  "Checklist de Documentos": {
+    type: "checklist",
+    items: [
+      "=== DOCUMENTOS BANCARIOS ===",
+      "Extratos das contas correntes (ultimos 3 meses)",
+      "Extratos das contas poupanca (ultimos 3 meses)",
+      "Extratos de investimentos (CDBs, fundos, acoes)",
+      "",
+      "=== CARTOES DE CREDITO ===",
+      "Faturas recentes de todos os cartoes que utiliza",
+      "Lista de compras parceladas em andamento",
+      "Limite disponivel em cada cartao",
+      "",
+      "=== COMPROVANTES DE RENDA ===",
+      "Contracheques dos ultimos 3 meses",
+      "Pro-labore ou recibos de autonomo",
+      "Comprovantes de rendimentos extras (freelance, aluguel)",
+      "",
+      "=== COMPROMISSOS FINANCEIROS ===",
+      "Contratos de financiamento (imovel, veiculo)",
+      "Contratos de consorcios",
+      "Contratos de emprestimos pessoais",
+      "Boletos de carnes em aberto",
+      "",
+      "=== IMPOSTOS E TAXAS ANUAIS ===",
+      "Ultimo IPVA pago",
+      "Ultimo IPTU pago",
+      "Declaracao do Imposto de Renda (ano anterior)",
+      "Guia de pagamento do IRPF (restituicao ou a pagar)",
+      "",
+      "=== CONTAS FIXAS MENSAIS ===",
+      "Boletos de aluguel ou prestacao do imovel",
+      "Contas de agua, luz, gas",
+      "Internet e telefone",
+      "Planos de saude",
+      "Seguros (vida, residencial, auto)",
+      "",
+      "=== ASSINATURAS E SERVICOS ===",
+      "Lista de assinaturas de streaming",
+      "Mensalidades de academia, cursos, clubes",
+      "Planos de celular",
+      "Aplicativos com cobranca recorrente",
+      "",
+      "=== OUTROS DOCUMENTOS ===",
+      "Login e senha do internet banking",
+      "Extrato do FGTS (se aplicavel)",
+      "Anotacoes de gastos em dinheiro",
+      "Contratos de pensao alimenticia (se aplicavel)",
     ],
   },
   "Guia de Categorias": {
@@ -301,11 +392,17 @@ export function AdminMaterialGenerator() {
     loadContents();
   }, []);
 
-  // Inicializar URLs quando contents carregar
+  // Inicializar URLs quando contents carregar (incluindo defaultUrl de materiais externos)
   useEffect(() => {
     const initialUrls: Record<string, string> = {};
     contents.forEach(c => {
-      initialUrls[c.id] = c.url || "";
+      const materialData = MATERIAL_DATA[c.title];
+      // Se for material externo e não tiver URL salva, usar defaultUrl
+      if (materialData?.type === "external" && !c.url && materialData.defaultUrl) {
+        initialUrls[c.id] = materialData.defaultUrl;
+      } else {
+        initialUrls[c.id] = c.url || "";
+      }
     });
     setUrls(initialUrls);
   }, [contents]);
@@ -369,13 +466,23 @@ export function AdminMaterialGenerator() {
     setGenerating(content.id);
     
     try {
-      const materialData = MATERIAL_DATA[content.title as keyof typeof MATERIAL_DATA];
+      const materialData = MATERIAL_DATA[content.title];
       
       if (!materialData) {
         toast({
           title: "Material não encontrado",
           description: `Não há template definido para "${content.title}"`,
           variant: "destructive",
+        });
+        setGenerating(null);
+        return;
+      }
+
+      // Material externo não gera PDF
+      if (materialData.type === "external") {
+        toast({
+          title: "Material externo",
+          description: "Este material já existe. Use a URL para disponibilizá-lo aos alunos.",
         });
         setGenerating(null);
         return;
@@ -451,7 +558,9 @@ export function AdminMaterialGenerator() {
 
   const generateAllPDFs = async () => {
     for (const content of contents) {
-      if (MATERIAL_DATA[content.title as keyof typeof MATERIAL_DATA]) {
+      const materialData = MATERIAL_DATA[content.title];
+      // Pular materiais externos
+      if (materialData && materialData.type !== "external") {
         await generatePDF(content);
         // Small delay between generations
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -476,10 +585,10 @@ export function AdminMaterialGenerator() {
   }
 
   const pdfContents = contents.filter(
-    (c) => c.type === "pdf" && MATERIAL_DATA[c.title as keyof typeof MATERIAL_DATA]
+    (c) => c.type === "pdf" && MATERIAL_DATA[c.title]
   );
   const otherContents = contents.filter(
-    (c) => c.type === "pdf" && !MATERIAL_DATA[c.title as keyof typeof MATERIAL_DATA]
+    (c) => c.type === "pdf" && !MATERIAL_DATA[c.title]
   );
 
   return (
@@ -504,101 +613,115 @@ export function AdminMaterialGenerator() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            {pdfContents.map((content, index) => (
-              <motion.div
-                key={content.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="p-4 border rounded-xl bg-card hover:shadow-md transition-shadow space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-primary" />
+            {pdfContents.map((content, index) => {
+              const materialData = MATERIAL_DATA[content.title];
+              const isExternal = materialData?.type === "external";
+              
+              return (
+                <motion.div
+                  key={content.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-4 border rounded-xl bg-card hover:shadow-md transition-shadow space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isExternal ? "bg-blue-100" : "bg-primary/10"
+                      }`}>
+                        <FileText className={`h-5 w-5 ${isExternal ? "text-blue-600" : "text-primary"}`} />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{content.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {getModuleName(content.module_id)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium">{content.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {getModuleName(content.module_id)}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {isExternal && (
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                          Material externo
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className={
+                          content.url
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                        }
+                      >
+                        {content.url ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            URL salva
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-3 w-3 mr-1" />
+                            Sem URL
+                          </>
+                        )}
+                      </Badge>
+                      {!isExternal && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => generatePDF(content)}
+                          disabled={generating === content.id}
+                          className="gap-2"
+                        >
+                          {generating === content.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          Gerar PDF
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant="outline"
-                      className={
-                        content.url
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                      }
-                    >
-                      {content.url ? (
-                        <>
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          URL salva
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-3 w-3 mr-1" />
-                          Sem URL
-                        </>
-                      )}
-                    </Badge>
+                  
+                  {/* Campo de URL */}
+                  <div className="flex items-center gap-2 pl-14">
+                    <div className="flex-1 relative">
+                      <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder={isExternal ? "URL do material externo" : "Cole a URL do PDF (Google Drive, etc.)"}
+                        value={urls[content.id] || ""}
+                        onChange={(e) => setUrls(prev => ({ ...prev, [content.id]: e.target.value }))}
+                        className="pl-9 text-sm"
+                      />
+                    </div>
+                    {urls[content.id] && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyUrl(urls[content.id])}
+                        className="shrink-0"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => generatePDF(content)}
-                      disabled={generating === content.id}
-                      className="gap-2"
+                      onClick={() => saveUrl(content.id)}
+                      disabled={savingUrl === content.id || urls[content.id] === (content.url || "")}
+                      className="gap-2 shrink-0"
                     >
-                      {generating === content.id ? (
+                      {savingUrl === content.id ? (
                         <RefreshCw className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Download className="h-4 w-4" />
+                        <Save className="h-4 w-4" />
                       )}
-                      Gerar PDF
+                      Salvar URL
                     </Button>
                   </div>
-                </div>
-                
-                {/* Campo de URL */}
-                <div className="flex items-center gap-2 pl-14">
-                  <div className="flex-1 relative">
-                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Cole a URL do PDF (Google Drive, etc.)"
-                      value={urls[content.id] || ""}
-                      onChange={(e) => setUrls(prev => ({ ...prev, [content.id]: e.target.value }))}
-                      className="pl-9 text-sm"
-                    />
-                  </div>
-                  {urls[content.id] && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => copyUrl(urls[content.id])}
-                      className="shrink-0"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={() => saveUrl(content.id)}
-                    disabled={savingUrl === content.id || urls[content.id] === (content.url || "")}
-                    className="gap-2 shrink-0"
-                  >
-                    {savingUrl === content.id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    Salvar URL
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
 
           {otherContents.length > 0 && (

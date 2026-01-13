@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
+import { cn } from "@/lib/utils";
 
 interface FinancialSummaryProps {
   userId: string;
@@ -9,6 +12,12 @@ interface FinancialSummaryProps {
 }
 
 export function FinancialSummary({ userId, refreshKey }: FinancialSummaryProps) {
+  const [viewMode, setViewMode] = useState<"all" | "month">("all");
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  
   const [summary, setSummary] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -18,14 +27,26 @@ export function FinancialSummary({ userId, refreshKey }: FinancialSummaryProps) 
 
   useEffect(() => {
     loadFinancialSummary();
-  }, [userId, refreshKey]);
+  }, [userId, refreshKey, viewMode, selectedMonth]);
 
   const loadFinancialSummary = async () => {
-    // Get finances
-    const { data: finances } = await supabase
+    // Build query
+    let query = supabase
       .from("finances")
-      .select("type, value")
+      .select("type, value, date")
       .eq("user_id", userId);
+
+    // Apply date filter if in month mode
+    if (viewMode === "month") {
+      const [year, month] = selectedMonth.split("-");
+      const startDate = `${year}-${month}-01`;
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const endDate = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
+      
+      query = query.gte("date", startDate).lte("date", endDate);
+    }
+
+    const { data: finances } = await query;
 
     // Get goals
     const { data: goals } = await supabase
@@ -63,10 +84,38 @@ export function FinancialSummary({ userId, refreshKey }: FinancialSummaryProps) 
     { name: "Despesas", value: summary.totalExpenses, color: "#ef137c" },
   ];
 
+  const getSelectedMonthLabel = () => {
+    const [year, month] = selectedMonth.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1, 12, 0, 0);
+    return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-brand-blue">Resumo Financeiro</CardTitle>
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-3">
+          <CardTitle className="text-brand-blue">Resumo Financeiro</CardTitle>
+          
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "all" | "month")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="all">Geral</TabsTrigger>
+              <TabsTrigger value="month">Por Mês</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {viewMode === "month" && (
+            <div className="flex flex-col gap-2">
+              <MonthYearPicker 
+                value={selectedMonth} 
+                onChange={setSelectedMonth}
+                className="justify-center"
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Dados de {getSelectedMonthLabel()}
+              </p>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -124,8 +173,4 @@ export function FinancialSummary({ userId, refreshKey }: FinancialSummaryProps) 
       </CardContent>
     </Card>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
 }

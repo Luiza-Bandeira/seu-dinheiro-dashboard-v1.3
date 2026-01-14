@@ -189,7 +189,7 @@ const Index = () => {
             duration: 0.6,
             delay: 0.5
           }}>
-              <Button size="lg" onClick={() => window.open(paymentLink, "_blank")} className="px-8 sm:px-12 py-6 sm:py-8 text-lg sm:text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all">
+              <Button size="lg" onClick={() => window.open(paymentLink, "_blank")} className="sm:px-12 py-6 sm:py-8 text-lg sm:text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all px-[13px]">
                 <ArrowRight className="mr-2 w-5 h-5 sm:w-6 sm:h-6" />
                 Quero minha clareza financeira
               </Button>

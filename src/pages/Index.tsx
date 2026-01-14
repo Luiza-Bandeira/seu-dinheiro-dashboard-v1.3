@@ -6,9 +6,54 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, ArrowRight, Target, Eye, FolderOpen, Compass, RefreshCw, Users, GraduationCap, Quote, Clock, Star } from "lucide-react";
+// Helper function to convert video URLs to embed format
+const getEmbedUrl = (url: string): string => {
+  if (!url) return '';
+  
+  // Google Drive
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+  }
+  
+  // YouTube watch URL
+  if (url.includes('youtube.com/watch')) {
+    const videoId = url.split('v=')[1]?.split('&')[0];
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+  }
+  
+  // YouTube short URL
+  if (url.includes('youtu.be/')) {
+    const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+  }
+  
+  // Already an embed URL
+  return url;
+};
+
+// Helper function to format price
+const formatPrice = (value: string): string => {
+  const num = parseFloat(value);
+  if (isNaN(num)) return value;
+  return num.toLocaleString('pt-BR');
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState<string>("");
+  const [price, setPrice] = useState<string>("1600");
+  const [originalPrice, setOriginalPrice] = useState<string>("5894");
+  const [installments, setInstallments] = useState<string>("12x de R$ 162,81");
+  const [paymentLink, setPaymentLink] = useState<string>("https://mpago.la/1KiNKG2");
+  const [specialCondition, setSpecialCondition] = useState<string>("janeiro");
+
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -31,16 +76,38 @@ const Index = () => {
       }
     });
 
-    // Load video URL from settings
-    const loadVideoUrl = async () => {
-      const {
-        data
-      } = await supabase.from('site_settings').select('setting_value').eq('setting_key', 'landing_video_url').single();
-      if (data?.setting_value) {
-        setVideoUrl(data.setting_value);
+    // Load settings from database
+    const loadSettings = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('setting_key, setting_value');
+      
+      if (data) {
+        data.forEach(setting => {
+          switch (setting.setting_key) {
+            case 'landing_video_url':
+              setVideoUrl(setting.setting_value || '');
+              break;
+            case 'landing_price':
+              setPrice(setting.setting_value || '1600');
+              break;
+            case 'landing_original_price':
+              setOriginalPrice(setting.setting_value || '5894');
+              break;
+            case 'landing_installments':
+              setInstallments(setting.setting_value || '12x de R$ 162,81');
+              break;
+            case 'landing_payment_link':
+              setPaymentLink(setting.setting_value || 'https://mpago.la/1KiNKG2');
+              break;
+            case 'landing_special_condition':
+              setSpecialCondition(setting.setting_value || 'janeiro');
+              break;
+          }
+        });
       }
     };
-    loadVideoUrl();
+    loadSettings();
     return () => subscription.unsubscribe();
   }, [navigate]);
   const fadeInUp = {
@@ -83,7 +150,7 @@ const Index = () => {
       once: true
     }
   };
-  const paymentLink = "https://mpago.la/1KiNKG2";
+  // paymentLink is now loaded from database
   const modules = [{
     number: 1,
     title: "Colocando Tudo na Mesa",
@@ -150,8 +217,8 @@ const Index = () => {
         }} transition={{
           duration: 0.8
         }}>
-            <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6">
-              Condição Especial de Janeiro
+            <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6 capitalize">
+              Condição Especial de {specialCondition}
             </Badge>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
@@ -175,7 +242,7 @@ const Index = () => {
             delay: 0.3
           }} className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 rounded-2xl overflow-hidden shadow-2xl">
                 <div className="aspect-video">
-                  <iframe src={videoUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Vídeo de apresentação" />
+                  <iframe src={getEmbedUrl(videoUrl)} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Vídeo de apresentação" />
                 </div>
               </motion.div>}
             
@@ -491,8 +558,8 @@ const Index = () => {
       <section className="py-20 px-6 bg-gradient-to-b from-brand-pink/5 to-brand-pink/20">
         <div className="max-w-3xl mx-auto">
           <motion.div {...fadeInUp} className="text-center mb-12">
-            <Badge className="bg-brand-magenta text-white mb-4 px-4 py-2">
-              Condição Especial de Janeiro
+            <Badge className="bg-brand-magenta text-white mb-4 px-4 py-2 capitalize">
+              Condição Especial de {specialCondition}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-brand-blue mb-4">
               Quanto vale realmente este programa?
@@ -531,17 +598,17 @@ const Index = () => {
               <div className="flex items-center justify-between mb-4">
                 <p className="text-lg font-semibold text-brand-blue">Valor Total Real:</p>
                 <p className="text-2xl font-bold text-brand-blue line-through opacity-60">
-                  R$ 5.894
+                  R$ {formatPrice(originalPrice)}
                 </p>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-xl font-bold text-brand-blue">Você paga apenas:</p>
                 <p className="text-3xl md:text-4xl font-bold text-primary">
-                  R$ 1.600
+                  R$ {formatPrice(price)}
                 </p>
               </div>
-              <p className="text-center mt-4 text-brand-magenta font-medium">
-                Condição especial válida apenas em janeiro
+              <p className="text-center mt-4 text-brand-magenta font-medium capitalize">
+                Condição especial válida apenas em {specialCondition}
               </p>
             </div>
           </motion.div>
@@ -551,8 +618,8 @@ const Index = () => {
       {/* SEÇÃO 13 — CTA FINAL */}
       <section className="py-20 px-6 bg-gradient-to-br from-brand-blue to-brand-blue/90">
         <motion.div {...fadeInUp} className="max-w-3xl mx-auto text-center text-white">
-          <Badge className="bg-brand-magenta mb-6 px-4 py-2 text-white">
-            Condição Especial de Janeiro
+          <Badge className="bg-brand-magenta mb-6 px-4 py-2 text-white capitalize">
+            Condição Especial de {specialCondition}
           </Badge>
           
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
@@ -565,12 +632,12 @@ const Index = () => {
           
           {/* Pricing */}
           <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 mb-8 inline-block">
-            <p className="text-sm text-white/70 line-through mb-1">De R$ 5.894</p>
+            <p className="text-sm text-white/70 line-through mb-1">De R$ {formatPrice(originalPrice)}</p>
             <p className="text-4xl md:text-5xl font-bold text-white mb-2">
-              R$ 1.600
+              R$ {formatPrice(price)}
             </p>
             <p className="text-lg text-brand-pink font-medium">
-              ou 12x de R$ 162,81
+              ou {installments}
             </p>
           </div>
 

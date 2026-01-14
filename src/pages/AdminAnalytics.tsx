@@ -72,6 +72,11 @@ export default function AdminAnalytics() {
   
   // Site settings states
   const [videoUrl, setVideoUrl] = useState("");
+  const [price, setPrice] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [installments, setInstallments] = useState("");
+  const [paymentLink, setPaymentLink] = useState("");
+  const [specialCondition, setSpecialCondition] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -129,8 +134,28 @@ export default function AdminAnalytics() {
     
     // Load site settings
     if (settingsRes.data) {
-      const videoSetting = settingsRes.data.find(s => s.setting_key === 'landing_video_url');
-      if (videoSetting) setVideoUrl(videoSetting.setting_value || '');
+      settingsRes.data.forEach(setting => {
+        switch (setting.setting_key) {
+          case 'landing_video_url':
+            setVideoUrl(setting.setting_value || '');
+            break;
+          case 'landing_price':
+            setPrice(setting.setting_value || '');
+            break;
+          case 'landing_original_price':
+            setOriginalPrice(setting.setting_value || '');
+            break;
+          case 'landing_installments':
+            setInstallments(setting.setting_value || '');
+            break;
+          case 'landing_payment_link':
+            setPaymentLink(setting.setting_value || '');
+            break;
+          case 'landing_special_condition':
+            setSpecialCondition(setting.setting_value || '');
+            break;
+        }
+      });
     }
   };
 
@@ -331,22 +356,33 @@ export default function AdminAnalytics() {
     }, `painel-admin-${new Date().toISOString().slice(0, 10)}`);
   };
 
-  const handleSaveVideoUrl = async () => {
+  const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .update({ setting_value: videoUrl })
-        .eq('setting_key', 'landing_video_url');
+      const settings = [
+        { key: 'landing_video_url', value: videoUrl },
+        { key: 'landing_price', value: price },
+        { key: 'landing_original_price', value: originalPrice },
+        { key: 'landing_installments', value: installments },
+        { key: 'landing_payment_link', value: paymentLink },
+        { key: 'landing_special_condition', value: specialCondition },
+      ];
       
-      if (error) throw error;
+      for (const setting of settings) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ setting_value: setting.value })
+          .eq('setting_key', setting.key);
+        
+        if (error) throw error;
+      }
       
       toast({
         title: "Configurações salvas",
-        description: "A URL do vídeo foi atualizada com sucesso.",
+        description: "Todas as configurações foram atualizadas com sucesso.",
       });
     } catch (error) {
-      console.error('Error saving video URL:', error);
+      console.error('Error saving settings:', error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar as configurações.",
@@ -355,6 +391,38 @@ export default function AdminAnalytics() {
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  // Helper function to get embed URL for preview
+  const getEmbedUrl = (url: string): string => {
+    if (!url) return '';
+    
+    // Google Drive
+    if (url.includes('drive.google.com')) {
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+    
+    // YouTube watch URL
+    if (url.includes('youtube.com/watch')) {
+      const videoId = url.split('v=')[1]?.split('&')[0];
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+    
+    // YouTube short URL
+    if (url.includes('youtu.be/')) {
+      const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}`;
+      }
+    }
+    
+    // Already an embed URL
+    return url;
   };
 
   if (loading) {
@@ -772,47 +840,116 @@ export default function AdminAnalytics() {
                     Gerencie as configurações do site público
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="videoUrl" className="text-base font-medium">
-                      URL do Vídeo de Vendas
-                    </Label>
-                    <Input 
-                      id="videoUrl"
-                      placeholder="https://www.youtube.com/embed/VIDEO_ID"
-                      value={videoUrl}
-                      onChange={(e) => setVideoUrl(e.target.value)}
-                      className="max-w-2xl"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Use o formato de embed do YouTube (https://www.youtube.com/embed/VIDEO_ID) ou Vimeo (https://player.vimeo.com/video/VIDEO_ID)
-                    </p>
-                  </div>
-                  
-                  {videoUrl && (
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">Pré-visualização</Label>
-                      <div className="max-w-2xl rounded-lg overflow-hidden border border-border">
-                        <div className="aspect-video">
-                          <iframe
-                            src={videoUrl}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            title="Pré-visualização do vídeo"
-                          />
+                <CardContent className="space-y-8">
+                  {/* Video Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-brand-blue border-b pb-2">Vídeo de Vendas</h3>
+                    <div className="space-y-3">
+                      <Label htmlFor="videoUrl" className="text-base font-medium">
+                        URL do Vídeo
+                      </Label>
+                      <Input 
+                        id="videoUrl"
+                        placeholder="https://www.youtube.com/watch?v=VIDEO_ID ou https://drive.google.com/file/d/FILE_ID/view"
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        className="max-w-2xl"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Suporta: YouTube, Vimeo e Google Drive
+                      </p>
+                    </div>
+                    
+                    {videoUrl && (
+                      <div className="space-y-2">
+                        <Label className="text-base font-medium">Pré-visualização</Label>
+                        <div className="max-w-2xl rounded-lg overflow-hidden border border-border">
+                          <div className="aspect-video">
+                            <iframe
+                              src={getEmbedUrl(videoUrl)}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title="Pré-visualização do vídeo"
+                            />
+                          </div>
                         </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Pricing Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-brand-blue border-b pb-2">Configurações de Preço</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Preço Principal (apenas número)</Label>
+                        <Input 
+                          id="price"
+                          placeholder="1600"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">Ex: 1600 (será exibido como R$ 1.600)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="originalPrice">Preço Original Riscado (apenas número)</Label>
+                        <Input 
+                          id="originalPrice"
+                          placeholder="5894"
+                          value={originalPrice}
+                          onChange={(e) => setOriginalPrice(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">Ex: 5894 (será exibido como R$ 5.894)</p>
+                      </div>
                     </div>
-                  )}
+                    <div className="space-y-2 max-w-2xl">
+                      <Label htmlFor="installments">Valor das Parcelas</Label>
+                      <Input 
+                        id="installments"
+                        placeholder="12x de R$ 162,81"
+                        value={installments}
+                        onChange={(e) => setInstallments(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Texto completo que será exibido</p>
+                    </div>
+                    <div className="space-y-2 max-w-2xl">
+                      <Label htmlFor="paymentLink">Link de Pagamento</Label>
+                      <Input 
+                        id="paymentLink"
+                        placeholder="https://mpago.la/1KiNKG2"
+                        value={paymentLink}
+                        onChange={(e) => setPaymentLink(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">URL completa do link de pagamento</p>
+                    </div>
+                  </div>
+
+                  {/* Special Condition Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-brand-blue border-b pb-2">Condição Especial</h3>
+                    <div className="space-y-2 max-w-md">
+                      <Label htmlFor="specialCondition">Texto da Condição (ex: janeiro, fevereiro)</Label>
+                      <Input 
+                        id="specialCondition"
+                        placeholder="janeiro"
+                        value={specialCondition}
+                        onChange={(e) => setSpecialCondition(e.target.value)}
+                      />
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Preview: <span className="font-medium text-brand-magenta capitalize">"Condição Especial de {specialCondition || 'janeiro'}"</span>
+                      </p>
+                    </div>
+                  </div>
                   
                   <Button 
-                    onClick={handleSaveVideoUrl}
+                    onClick={handleSaveSettings}
                     disabled={savingSettings}
                     className="bg-brand-blue hover:bg-brand-blue/90"
+                    size="lg"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {savingSettings ? "Salvando..." : "Salvar Configurações"}
+                    {savingSettings ? "Salvando..." : "Salvar Todas as Configurações"}
                   </Button>
                 </CardContent>
               </Card>

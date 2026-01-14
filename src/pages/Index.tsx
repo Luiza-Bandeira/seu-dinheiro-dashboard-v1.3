@@ -9,7 +9,7 @@ import { Check, X, ArrowRight, Target, Eye, FolderOpen, Compass, RefreshCw, User
 // Helper function to convert video URLs to embed format
 const getEmbedUrl = (url: string): string => {
   if (!url) return '';
-  
+
   // Google Drive
   if (url.includes('drive.google.com')) {
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -17,7 +17,7 @@ const getEmbedUrl = (url: string): string => {
       return `https://drive.google.com/file/d/${match[1]}/preview`;
     }
   }
-  
+
   // YouTube watch URL
   if (url.includes('youtube.com/watch')) {
     const videoId = url.split('v=')[1]?.split('&')[0];
@@ -25,7 +25,7 @@ const getEmbedUrl = (url: string): string => {
       return `https://www.youtube.com/embed/${videoId}`;
     }
   }
-  
+
   // YouTube short URL
   if (url.includes('youtu.be/')) {
     const videoId = url.split('youtu.be/')[1]?.split('?')[0];
@@ -33,7 +33,7 @@ const getEmbedUrl = (url: string): string => {
       return `https://www.youtube.com/embed/${videoId}`;
     }
   }
-  
+
   // Already an embed URL
   return url;
 };
@@ -44,7 +44,6 @@ const formatPrice = (value: string): string => {
   if (isNaN(num)) return value;
   return num.toLocaleString('pt-BR');
 };
-
 const Index = () => {
   const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState<string>("");
@@ -53,7 +52,6 @@ const Index = () => {
   const [installments, setInstallments] = useState<string>("12x de R$ 162,81");
   const [paymentLink, setPaymentLink] = useState<string>("https://mpago.la/1KiNKG2");
   const [specialCondition, setSpecialCondition] = useState<string>("janeiro");
-
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -78,10 +76,9 @@ const Index = () => {
 
     // Load settings from database
     const loadSettings = async () => {
-      const { data } = await supabase
-        .from('site_settings')
-        .select('setting_key, setting_value');
-      
+      const {
+        data
+      } = await supabase.from('site_settings').select('setting_key, setting_value');
       if (data) {
         data.forEach(setting => {
           switch (setting.setting_key) {
@@ -494,7 +491,7 @@ const Index = () => {
                 <Quote className="w-6 h-6 text-brand-blue" />
               </div>
               <p className="text-4xl font-bold text-brand-blue mb-2">100%</p>
-              <p className="text-muted-foreground">satisfação dos alunos</p>
+              <p className="text-muted-foreground">baseado em experiência prática, construindo e ajustando orçamentos reais desde 2019</p>
             </motion.div>
           </motion.div>
 

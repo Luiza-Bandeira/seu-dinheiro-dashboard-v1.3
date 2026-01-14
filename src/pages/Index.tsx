@@ -9,17 +9,23 @@ import { Check, X, ArrowRight, Target, Eye, FolderOpen, Compass, RefreshCw, User
 const Index = () => {
   const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState<string>("");
-
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (session) {
         navigate("/dashboard");
       }
     };
     checkUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         navigate("/dashboard");
       }
@@ -27,86 +33,105 @@ const Index = () => {
 
     // Load video URL from settings
     const loadVideoUrl = async () => {
-      const { data } = await supabase
-        .from('site_settings')
-        .select('setting_value')
-        .eq('setting_key', 'landing_video_url')
-        .single();
+      const {
+        data
+      } = await supabase.from('site_settings').select('setting_value').eq('setting_key', 'landing_video_url').single();
       if (data?.setting_value) {
         setVideoUrl(data.setting_value);
       }
     };
     loadVideoUrl();
-
     return () => subscription.unsubscribe();
   }, [navigate]);
-
   const fadeInUp = {
-    initial: { opacity: 0, y: 30 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true },
-    transition: { duration: 0.6 }
+    initial: {
+      opacity: 0,
+      y: 30
+    },
+    whileInView: {
+      opacity: 1,
+      y: 0
+    },
+    viewport: {
+      once: true
+    },
+    transition: {
+      duration: 0.6
+    }
   };
-
   const staggerContainer = {
     initial: {},
     whileInView: {
-      transition: { staggerChildren: 0.1 }
+      transition: {
+        staggerChildren: 0.1
+      }
     },
-    viewport: { once: true }
+    viewport: {
+      once: true
+    }
   };
-
   const staggerItem = {
-    initial: { opacity: 0, y: 20 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true }
+    initial: {
+      opacity: 0,
+      y: 20
+    },
+    whileInView: {
+      opacity: 1,
+      y: 0
+    },
+    viewport: {
+      once: true
+    }
   };
-
   const paymentLink = "https://mpago.la/1KiNKG2";
-
-  const modules = [
-    {
-      number: 1,
-      title: "Colocando Tudo na Mesa",
-      description: "Reúna todos os seus documentos financeiros e tenha uma visão completa da sua situação atual. Extratos, faturas, financiamentos - tudo organizado.",
-      icon: FolderOpen,
-    },
-    {
-      number: 2,
-      title: "Olhando o Dinheiro de Perto",
-      description: "Analise cada entrada e saída. Entenda para onde seu dinheiro realmente vai e identifique padrões que você nunca percebeu.",
-      icon: Eye,
-    },
-    {
-      number: 3,
-      title: "Reorganizando a Vida Financeira",
-      description: "Estruture seu orçamento de forma sustentável. Crie um sistema que funciona para você, sem planilhas complicadas.",
-      icon: RefreshCw,
-    },
-    {
-      number: 4,
-      title: "Planos e Sonhos",
-      description: "Defina seus objetivos financeiros de curto, médio e longo prazo. Trace um caminho claro para realizá-los.",
-      icon: Compass,
-    },
-    {
-      number: 5,
-      title: "Autonomia e Rotina Financeira",
-      description: "Desenvolva hábitos financeiros saudáveis. Crie uma rotina simples de acompanhamento que você vai manter.",
-      icon: Target,
-    },
-  ];
-
-  const valueItems = [
-    { title: "Sessões individuais de aplicação estratégica", subtitle: "Análise do seu cenário real e aplicação personalizada do método para resolver o seu problema financeiro específico.", price: "R$ 1.500" },
-    { title: "Encontros ao vivo durante o programa", subtitle: "Para tirar dúvidas com exemplos reais", price: "R$ 997" },
-    { title: "Suporte via WhatsApp por 1 ano", subtitle: "Acompanhamento contínuo", price: "R$ 1.200" },
-    { title: "Ferramentas e materiais exclusivos", subtitle: "Planilhas, templates e guias práticos", price: "R$ 1.200" },
-    { title: "Aulas gravadas + conteúdo periódico", subtitle: "Acesso completo durante o programa", price: "R$ 997" }
-  ];
-
-  return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+  const modules = [{
+    number: 1,
+    title: "Colocando Tudo na Mesa",
+    description: "Reúna todos os seus documentos financeiros e tenha uma visão completa da sua situação atual. Extratos, faturas, financiamentos - tudo organizado.",
+    icon: FolderOpen
+  }, {
+    number: 2,
+    title: "Olhando o Dinheiro de Perto",
+    description: "Analise cada entrada e saída. Entenda para onde seu dinheiro realmente vai e identifique padrões que você nunca percebeu.",
+    icon: Eye
+  }, {
+    number: 3,
+    title: "Reorganizando a Vida Financeira",
+    description: "Estruture seu orçamento de forma sustentável. Crie um sistema que funciona para você, sem planilhas complicadas.",
+    icon: RefreshCw
+  }, {
+    number: 4,
+    title: "Planos e Sonhos",
+    description: "Defina seus objetivos financeiros de curto, médio e longo prazo. Trace um caminho claro para realizá-los.",
+    icon: Compass
+  }, {
+    number: 5,
+    title: "Autonomia e Rotina Financeira",
+    description: "Desenvolva hábitos financeiros saudáveis. Crie uma rotina simples de acompanhamento que você vai manter.",
+    icon: Target
+  }];
+  const valueItems = [{
+    title: "Sessões individuais de aplicação estratégica",
+    subtitle: "Análise do seu cenário real e aplicação personalizada do método para resolver o seu problema financeiro específico.",
+    price: "R$ 1.500"
+  }, {
+    title: "Encontros ao vivo durante o programa",
+    subtitle: "Para tirar dúvidas com exemplos reais",
+    price: "R$ 997"
+  }, {
+    title: "Suporte via WhatsApp por 1 ano",
+    subtitle: "Acompanhamento contínuo",
+    price: "R$ 1.200"
+  }, {
+    title: "Ferramentas e materiais exclusivos",
+    subtitle: "Planilhas, templates e guias práticos",
+    price: "R$ 1.200"
+  }, {
+    title: "Aulas gravadas + conteúdo periódico",
+    subtitle: "Acesso completo durante o programa",
+    price: "R$ 997"
+  }];
+  return <div className="min-h-screen bg-background overflow-x-hidden">
       {/* SEÇÃO 1 — HERO */}
       <section className="min-h-[90vh] flex items-center justify-center px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20 bg-gradient-to-br from-brand-blue via-brand-blue/95 to-brand-blue/90 relative overflow-hidden">
         {/* Background decorativo */}
@@ -116,11 +141,15 @@ const Index = () => {
         </div>
         
         <div className="max-w-5xl mx-auto text-center text-white relative z-10 w-full px-2">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 40
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.8
+        }}>
             <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6">
               Condição Especial de Janeiro
             </Badge>
@@ -135,35 +164,32 @@ const Index = () => {
             </p>
             
             {/* Vídeo de Vendas */}
-            {videoUrl && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 rounded-2xl overflow-hidden shadow-2xl"
-              >
+            {videoUrl && <motion.div initial={{
+            opacity: 0,
+            scale: 0.95
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} transition={{
+            duration: 0.6,
+            delay: 0.3
+          }} className="w-full max-w-3xl mx-auto mb-6 sm:mb-8 rounded-2xl overflow-hidden shadow-2xl">
                 <div className="aspect-video">
-                  <iframe
-                    src={videoUrl}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title="Vídeo de apresentação"
-                  />
+                  <iframe src={videoUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Vídeo de apresentação" />
                 </div>
-              </motion.div>
-            )}
+              </motion.div>}
             
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-            >
-              <Button 
-                size="lg" 
-                onClick={() => window.open(paymentLink, "_blank")}
-                className="px-8 sm:px-12 py-6 sm:py-8 text-lg sm:text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all"
-              >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6,
+            delay: 0.5
+          }}>
+              <Button size="lg" onClick={() => window.open(paymentLink, "_blank")} className="px-8 sm:px-12 py-6 sm:py-8 text-lg sm:text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all">
                 <ArrowRight className="mr-2 w-5 h-5 sm:w-6 sm:h-6" />
                 Quero minha clareza financeira
               </Button>
@@ -195,28 +221,19 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="space-y-3 sm:space-y-4 max-w-xl mx-auto px-2">
-            {[
-              "o dinheiro parece evaporar",
-              "você sempre sente que está \"correndo atrás\"",
-              "planilhas, apps, métodos… nada dura",
-              "a vida financeira parece sempre confusa",
-              "você trabalha, trabalha… mas não vê clareza"
-            ].map((pain, index) => (
-              <motion.div
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3 sm:gap-4 bg-background/80 p-3 sm:p-4 rounded-2xl shadow-sm"
-              >
+            {["o dinheiro parece evaporar", "você sempre sente que está \"correndo atrás\"", "planilhas, apps, métodos… nada dura", "a vida financeira parece sempre confusa", "você trabalha, trabalha… mas não vê clareza"].map((pain, index) => <motion.div key={index} {...staggerItem} transition={{
+            delay: index * 0.1
+          }} className="flex items-center gap-3 sm:gap-4 bg-background/80 p-3 sm:p-4 rounded-2xl shadow-sm">
                 <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-destructive/10 rounded-full flex items-center justify-center">
                   <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive" />
                 </div>
                 <p className="text-base sm:text-lg text-foreground">{pain}</p>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
 
-          <motion.div {...fadeInUp} transition={{ delay: 0.6 }} className="text-center mt-8 sm:mt-12 px-2">
+          <motion.div {...fadeInUp} transition={{
+          delay: 0.6
+        }} className="text-center mt-8 sm:mt-12 px-2">
             <p className="text-lg sm:text-xl md:text-2xl font-semibold text-brand-blue">
               ➡️ Isso não é falta de disciplina.<br />
               <span className="text-primary">É falta de visão.</span>
@@ -234,24 +251,16 @@ const Index = () => {
           </motion.h2>
 
           <motion.div {...staggerContainer} className="space-y-3 sm:space-y-4 mb-8 sm:mb-12">
-            {[
-              "Você muda como decide.",
-              "Como compra.",
-              "Como investe.",
-              "Como vive."
-            ].map((phrase, index) => (
-              <motion.p
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.15 }}
-                className="text-lg sm:text-xl md:text-2xl font-medium text-white/90"
-              >
+            {["Você muda como decide.", "Como compra.", "Como investe.", "Como vive."].map((phrase, index) => <motion.p key={index} {...staggerItem} transition={{
+            delay: index * 0.15
+          }} className="text-lg sm:text-xl md:text-2xl font-medium text-white/90">
                 {phrase}
-              </motion.p>
-            ))}
+              </motion.p>)}
           </motion.div>
 
-          <motion.p {...fadeInUp} transition={{ delay: 0.8 }} className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-pink">
+          <motion.p {...fadeInUp} transition={{
+          delay: 0.8
+        }} className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-pink">
             Clareza financeira é clareza de vida.
           </motion.p>
         </div>
@@ -290,12 +299,9 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2">
-            {modules.map((module, index) => (
-              <motion.div
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.1 }}
-              >
+            {modules.map((module, index) => <motion.div key={index} {...staggerItem} transition={{
+            delay: index * 0.1
+          }}>
                 <Card className="h-full hover:shadow-lg transition-shadow border-border/50">
                   <CardHeader className="p-4 sm:p-6">
                     <div className="flex items-center gap-2 sm:gap-3 mb-2">
@@ -316,8 +322,7 @@ const Index = () => {
                     </CardDescription>
                   </CardContent>
                 </Card>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -332,7 +337,9 @@ const Index = () => {
             </Badge>
           </motion.div>
           
-          <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
+          <motion.div {...fadeInUp} transition={{
+          delay: 0.2
+        }}>
             <Card className="border-2 border-brand-magenta/30 bg-gradient-to-br from-background to-brand-pink/5 overflow-hidden">
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl md:text-3xl text-brand-magenta">
@@ -367,51 +374,7 @@ const Index = () => {
       </section>
 
       {/* SEÇÃO 7 — ACESSO ANUAL */}
-      <section className="py-16 px-6 bg-brand-blue text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2 {...fadeInUp} className="text-3xl md:text-4xl font-bold mb-10">
-            Seu acesso por 1 ano completo
-          </motion.h2>
-          
-          <motion.div {...staggerContainer} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.div {...staggerItem}>
-              <Card className="bg-white/10 border-white/20 text-white h-full">
-                <CardContent className="p-6 text-center">
-                  <Clock className="w-12 h-12 mx-auto mb-4 text-brand-pink" />
-                  <h3 className="text-xl font-bold mb-2 text-white">12 meses de acesso</h3>
-                  <p className="text-white/70">
-                    Reveja o conteúdo quantas vezes quiser
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div {...staggerItem} transition={{ delay: 0.1 }}>
-              <Card className="bg-white/10 border-white/20 text-white h-full">
-                <CardContent className="p-6 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-brand-pink" />
-                  <h3 className="text-xl font-bold mb-2 text-white">Aulas das próximas turmas</h3>
-                  <p className="text-white/70">
-                    Acesso às aulas bônus ao vivo de todas as turmas
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div {...staggerItem} transition={{ delay: 0.2 }}>
-              <Card className="bg-white/10 border-white/20 text-white h-full">
-                <CardContent className="p-6 text-center">
-                  <RefreshCw className="w-12 h-12 mx-auto mb-4 text-brand-pink" />
-                  <h3 className="text-xl font-bold mb-2 text-white">Atualizações inclusas</h3>
-                  <p className="text-white/70">
-                    Novos materiais e ferramentas durante seu acesso
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+      
 
       {/* SEÇÃO 8 — RESULTADOS */}
       <section className="py-20 px-6">
@@ -423,28 +386,14 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              "clareza do dinheiro",
-              "decisões seguras",
-              "paz financeira",
-              "rotina leve",
-              "sistema simples",
-              "direção real",
-              "maturidade financeira",
-              "controle total"
-            ].map((result, index) => (
-              <motion.div
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.05 }}
-                className="bg-card p-4 rounded-2xl shadow-sm border border-brand-pink/30 flex items-center gap-3"
-              >
+            {["clareza do dinheiro", "decisões seguras", "paz financeira", "rotina leve", "sistema simples", "direção real", "maturidade financeira", "controle total"].map((result, index) => <motion.div key={index} {...staggerItem} transition={{
+            delay: index * 0.05
+          }} className="bg-card p-4 rounded-2xl shadow-sm border border-brand-pink/30 flex items-center gap-3">
                 <div className="flex-shrink-0 w-6 h-6 bg-green-500/10 rounded-full flex items-center justify-center">
                   <Check className="w-4 h-4 text-green-600" />
                 </div>
                 <span className="text-sm font-medium text-foreground">{result}</span>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -461,7 +410,9 @@ const Index = () => {
               <p className="text-muted-foreground">análises financeiras individuais</p>
             </motion.div>
 
-            <motion.div {...staggerItem} transition={{ delay: 0.1 }} className="text-center">
+            <motion.div {...staggerItem} transition={{
+            delay: 0.1
+          }} className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <GraduationCap className="w-6 h-6 text-brand-blue" />
               </div>
@@ -469,7 +420,9 @@ const Index = () => {
               <p className="text-muted-foreground">método criado por especialista</p>
             </motion.div>
 
-            <motion.div {...staggerItem} transition={{ delay: 0.2 }} className="text-center">
+            <motion.div {...staggerItem} transition={{
+            delay: 0.2
+          }} className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Quote className="w-6 h-6 text-brand-blue" />
               </div>
@@ -500,27 +453,14 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="space-y-4">
-            {[
-              "clareza",
-              "controle",
-              "direção",
-              "leveza",
-              "decisão consciente",
-              "organização real",
-              "maturidade financeira"
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.08 }}
-                className="flex items-center gap-4 bg-card p-4 rounded-2xl shadow-sm border border-border/50"
-              >
+            {["clareza", "controle", "direção", "leveza", "decisão consciente", "organização real", "maturidade financeira"].map((item, index) => <motion.div key={index} {...staggerItem} transition={{
+            delay: index * 0.08
+          }} className="flex items-center gap-4 bg-card p-4 rounded-2xl shadow-sm border border-border/50">
                 <div className="flex-shrink-0 w-8 h-8 bg-brand-blue rounded-full flex items-center justify-center">
                   <Target className="w-4 h-4 text-white" />
                 </div>
                 <p className="text-lg font-medium text-foreground">{item}</p>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -535,28 +475,14 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              "Sessões individuais",
-              "Mapeamento completo",
-              "Plano personalizado",
-              "Estrutura organizada",
-              "Acompanhamento de evolução",
-              "Ferramentas fáceis",
-              "Suporte humano",
-              "Acesso por 1 ano"
-            ].map((benefit, index) => (
-              <motion.div
-                key={index}
-                {...staggerItem}
-                transition={{ delay: index * 0.08 }}
-                className="bg-card p-5 rounded-2xl shadow-sm border border-border/50 flex items-center gap-4"
-              >
+            {["Sessões individuais", "Mapeamento completo", "Plano personalizado", "Estrutura organizada", "Acompanhamento de evolução", "Ferramentas fáceis", "Suporte humano", "Acesso por 1 ano"].map((benefit, index) => <motion.div key={index} {...staggerItem} transition={{
+            delay: index * 0.08
+          }} className="bg-card p-5 rounded-2xl shadow-sm border border-border/50 flex items-center gap-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                   <Check className="w-5 h-5 text-primary" />
                 </div>
                 <p className="font-medium text-foreground">{benefit}</p>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -579,15 +505,17 @@ const Index = () => {
           <motion.div {...fadeInUp} className="bg-card rounded-3xl shadow-lg border border-border/50 overflow-hidden">
             {/* Items list */}
             <div className="divide-y divide-border/50">
-              {valueItems.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-between p-5 md:p-6"
-                >
+              {valueItems.map((item, index) => <motion.div key={index} initial={{
+              opacity: 0,
+              x: -20
+            }} whileInView={{
+              opacity: 1,
+              x: 0
+            }} viewport={{
+              once: true
+            }} transition={{
+              delay: index * 0.1
+            }} className="flex items-center justify-between p-5 md:p-6">
                   <div className="flex-1">
                     <p className="font-semibold text-foreground">{item.title}</p>
                     <p className="text-sm text-muted-foreground">{item.subtitle}</p>
@@ -595,8 +523,7 @@ const Index = () => {
                   <p className="text-lg md:text-xl font-bold text-brand-blue ml-4">
                     {item.price}
                   </p>
-                </motion.div>
-              ))}
+                </motion.div>)}
             </div>
 
             {/* Total section */}
@@ -648,11 +575,7 @@ const Index = () => {
           </div>
 
           <div className="flex flex-col gap-4 justify-center items-center">
-            <Button
-              size="lg"
-              onClick={() => window.open(paymentLink, "_blank")}
-              className="px-12 py-8 text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all"
-            >
+            <Button size="lg" onClick={() => window.open(paymentLink, "_blank")} className="px-12 py-8 text-xl bg-brand-magenta hover:bg-brand-magenta/90 rounded-2xl shadow-lg hover:shadow-xl transition-all">
               <ArrowRight className="w-6 h-6 mr-2" />
               Quero começar agora
             </Button>
@@ -678,8 +601,6 @@ const Index = () => {
           <p>© 2025 Seu Dinheiro na Mesa. Todos os direitos reservados.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift, ClipboardList, Files } from "lucide-react";
+import { FileText, FileSpreadsheet, Users, TrendingUp, Clock, Award, AlertTriangle, Star, Search, Download, Bell, BookOpen, UserPlus, Gift, ClipboardList, Files, Settings, Save } from "lucide-react";
 import { exportToPDF, exportToCSV, exportToXLSX, formatCurrency, formatPercentage } from "@/utils/exportUtils";
 import { AdminNotifications } from "@/components/admin/AdminNotifications";
 import { AdminLibraryManager } from "@/components/admin/AdminLibraryManager";
@@ -23,6 +23,7 @@ import { AdminMaterialGenerator } from "@/components/admin/AdminMaterialGenerato
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
 
 interface Profile {
   id: string;
@@ -68,6 +69,10 @@ export default function AdminAnalytics() {
   const [searchTerm, setSearchTerm] = useState("");
   const [progressFilter, setProgressFilter] = useState("all");
   const [activityFilter, setActivityFilter] = useState("all");
+  
+  // Site settings states
+  const [videoUrl, setVideoUrl] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -107,12 +112,13 @@ export default function AdminAnalytics() {
   };
 
   const loadAllData = async () => {
-    const [profilesRes, progressRes, analyticsRes, contentsRes, modulesRes] = await Promise.all([
+    const [profilesRes, progressRes, analyticsRes, contentsRes, modulesRes, settingsRes] = await Promise.all([
       supabase.from("profiles").select("id, email, full_name, payment_status, created_at, last_login_at, produto_adquirido, data_inicio, data_fim_vigencia, valor_pago"),
       supabase.from("progress").select("user_id, completed"),
       supabase.from("analytics_access").select("user_id, session_time, accessed_at"),
       supabase.from("contents").select("id"),
       supabase.from("modules").select("id, title"),
+      supabase.from("site_settings").select("setting_key, setting_value"),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data);
@@ -120,6 +126,12 @@ export default function AdminAnalytics() {
     if (analyticsRes.data) setAnalytics(analyticsRes.data);
     if (contentsRes.data) setContents(contentsRes.data);
     if (modulesRes.data) setModules(modulesRes.data);
+    
+    // Load site settings
+    if (settingsRes.data) {
+      const videoSetting = settingsRes.data.find(s => s.setting_key === 'landing_video_url');
+      if (videoSetting) setVideoUrl(videoSetting.setting_value || '');
+    }
   };
 
   // KPIs calculations
@@ -319,6 +331,32 @@ export default function AdminAnalytics() {
     }, `painel-admin-${new Date().toISOString().slice(0, 10)}`);
   };
 
+  const handleSaveVideoUrl = async () => {
+    setSavingSettings(true);
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .update({ setting_value: videoUrl })
+        .eq('setting_key', 'landing_video_url');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Configurações salvas",
+        description: "A URL do vídeo foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error saving video URL:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as configurações.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -478,7 +516,7 @@ export default function AdminAnalytics() {
 
           {/* Tabs for different views */}
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-9">
+            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
               <TabsTrigger value="users" className="flex items-center gap-1">
                 <UserPlus className="h-4 w-4" />
                 <span className="hidden sm:inline">Usuários</span>
@@ -505,6 +543,10 @@ export default function AdminAnalytics() {
               <TabsTrigger value="scripts" className="flex items-center gap-1">
                 <ClipboardList className="h-4 w-4" />
                 <span className="hidden sm:inline">Roteiros</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-1">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Configurações</span>
               </TabsTrigger>
             </TabsList>
 
@@ -717,6 +759,63 @@ export default function AdminAnalytics() {
 
             <TabsContent value="scripts" className="mt-6">
               <AdminCourseScripts />
+            </TabsContent>
+
+            <TabsContent value="settings" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-brand-blue flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Configurações da Landing Page
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie as configurações do site público
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="videoUrl" className="text-base font-medium">
+                      URL do Vídeo de Vendas
+                    </Label>
+                    <Input 
+                      id="videoUrl"
+                      placeholder="https://www.youtube.com/embed/VIDEO_ID"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      className="max-w-2xl"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Use o formato de embed do YouTube (https://www.youtube.com/embed/VIDEO_ID) ou Vimeo (https://player.vimeo.com/video/VIDEO_ID)
+                    </p>
+                  </div>
+                  
+                  {videoUrl && (
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">Pré-visualização</Label>
+                      <div className="max-w-2xl rounded-lg overflow-hidden border border-border">
+                        <div className="aspect-video">
+                          <iframe
+                            src={videoUrl}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="Pré-visualização do vídeo"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    onClick={handleSaveVideoUrl}
+                    disabled={savingSettings}
+                    className="bg-brand-blue hover:bg-brand-blue/90"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {savingSettings ? "Salvando..." : "Salvar Configurações"}
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </motion.div>

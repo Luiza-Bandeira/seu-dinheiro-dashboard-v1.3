@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { History as HistoryIcon, Filter, ArrowUpDown, Trash2, RefreshCw, CreditCard } from "lucide-react";
+import { History as HistoryIcon, Filter, ArrowUpDown, Trash2, RefreshCw, CreditCard, Pencil } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -26,6 +26,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Finance {
   id: string;
@@ -45,6 +53,16 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [finances, setFinances] = useState<Finance[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingFinance, setEditingFinance] = useState<Finance | null>(null);
+  const [editForm, setEditForm] = useState({
+    type: "",
+    category: "",
+    value: 0,
+    date: "",
+    description: "",
+  });
+  const [saving, setSaving] = useState(false);
   
   const [filterType, setFilterType] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("");
@@ -99,7 +117,6 @@ export default function History() {
     
     try {
       if (deleteAll && finance.source_id && finance.source_type) {
-        // Excluir todos os lançamentos relacionados (futuros)
         const today = new Date().toISOString().split("T")[0];
         
         const { error: deleteError } = await supabase
@@ -110,7 +127,6 @@ export default function History() {
         
         if (deleteError) throw deleteError;
         
-        // Também desativar a despesa recorrente/parcelada original
         if (finance.source_type === "recurring") {
           await supabase
             .from("recurring_expenses")
@@ -128,7 +144,6 @@ export default function History() {
           description: "Todos os lançamentos futuros foram removidos.",
         });
       } else {
-        // Excluir apenas este lançamento
         const { error } = await supabase
           .from("finances")
           .delete()
@@ -152,6 +167,60 @@ export default function History() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const openEditDialog = (finance: Finance) => {
+    setEditingFinance(finance);
+    setEditForm({
+      type: finance.type,
+      category: finance.category,
+      value: finance.value,
+      date: finance.date,
+      description: finance.description || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditFinance = async () => {
+    if (!editingFinance || !user) return;
+    if (editForm.value <= 0) {
+      toast({ title: "Erro", description: "Informe um valor válido", variant: "destructive" });
+      return;
+    }
+    if (!editForm.category.trim()) {
+      toast({ title: "Erro", description: "Informe a categoria", variant: "destructive" });
+      return;
+    }
+    if (!editForm.date) {
+      toast({ title: "Erro", description: "Informe a data", variant: "destructive" });
+      return;
+    }
+
+    if (saving) return;
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("finances")
+      .update({
+        type: editForm.type as any,
+        category: editForm.category,
+        value: editForm.value,
+        date: editForm.date,
+        description: editForm.description || null,
+      })
+      .eq("id", editingFinance.id);
+
+    if (error) {
+      toast({ title: "Erro ao editar", description: error.message, variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
+    toast({ title: "Lançamento atualizado!", description: "As alterações foram salvas." });
+    setEditDialogOpen(false);
+    setEditingFinance(null);
+    await loadFinances(user.id);
+    setSaving(false);
   };
 
   const getFilteredFinances = () => {
@@ -391,60 +460,71 @@ export default function History() {
                             {finance.value.toFixed(2)}
                           </TableCell>
                           <TableCell>
-                            {new Date(finance.date).toLocaleDateString("pt-BR")}
+                            {new Date(finance.date + "T12:00:00").toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell className="text-muted-foreground max-w-[200px] truncate">
                             {finance.description || "—"}
                           </TableCell>
                           <TableCell className="text-right">
-                            {finance.source_id ? (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    disabled={deletingId === finance.id}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Excluir lançamento</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Este lançamento faz parte de uma {finance.source_type === "recurring" ? "despesa recorrente" : "compra parcelada"}. 
-                                      O que você deseja fazer?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(finance, false)}
-                                      className="bg-orange-500 hover:bg-orange-600"
-                                    >
-                                      Excluir apenas este
-                                    </AlertDialogAction>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(finance, true)}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      Excluir todos futuros
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            ) : (
+                            <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                disabled={deletingId === finance.id}
-                                onClick={() => handleDelete(finance, false)}
+                                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                onClick={() => openEditDialog(finance)}
+                                title="Editar lançamento"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                            )}
+                              {finance.source_id ? (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      disabled={deletingId === finance.id}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Excluir lançamento</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Este lançamento faz parte de uma {finance.source_type === "recurring" ? "despesa recorrente" : "compra parcelada"}. 
+                                        O que você deseja fazer?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(finance, false)}
+                                        className="bg-orange-500 hover:bg-orange-600"
+                                      >
+                                        Excluir apenas este
+                                      </AlertDialogAction>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(finance, true)}
+                                        className="bg-destructive hover:bg-destructive/90"
+                                      >
+                                        Excluir todos futuros
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  disabled={deletingId === finance.id}
+                                  onClick={() => handleDelete(finance, false)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -462,6 +542,71 @@ export default function History() {
           </div>
         </motion.div>
       </main>
+
+      {/* Dialog de Editar Lançamento */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-brand-blue">Editar Lançamento</DialogTitle>
+            <DialogDescription>Altere os dados do lançamento financeiro</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={editForm.type} onValueChange={(val) => setEditForm({ ...editForm, type: val })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value="fixed_expense">Despesa Fixa</SelectItem>
+                  <SelectItem value="variable_expense">Despesa Variável</SelectItem>
+                  <SelectItem value="receivable">A Receber</SelectItem>
+                  <SelectItem value="debt">Dívida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Input
+                value={editForm.category}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                placeholder="Ex: Alimentação, Transporte"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                value={editForm.value || ""}
+                onChange={(e) => setEditForm({ ...editForm, value: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={editForm.date}
+                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações (opcional)</Label>
+              <Input
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Descrição do lançamento"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleEditFinance} disabled={saving}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

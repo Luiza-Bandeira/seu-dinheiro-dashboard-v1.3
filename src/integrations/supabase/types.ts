@@ -316,6 +316,47 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_contributions: {
+        Row: {
+          amount: number
+          contributed_at: string
+          created_at: string
+          id: string
+          investment_id: string
+          investment_name: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          contributed_at?: string
+          created_at?: string
+          id?: string
+          investment_id: string
+          investment_name: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          contributed_at?: string
+          created_at?: string
+          id?: string
+          investment_id?: string
+          investment_name?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_contributions_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments_current"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investment_withdrawals: {
         Row: {
           amount: number

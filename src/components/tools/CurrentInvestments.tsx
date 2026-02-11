@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, TrendingUp, ArrowDownCircle, History } from "lucide-react";
+import { Plus, Trash2, TrendingUp, ArrowDownCircle, History, PlusCircle, Pencil } from "lucide-react";
 import { useGamification } from "@/hooks/useGamification";
 import {
   Dialog,
@@ -18,6 +18,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CurrentInvestmentsProps {
   userId: string;
@@ -49,9 +53,16 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
   const [loading, setLoading] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [contributeDialogOpen, setContributeDialogOpen] = useState(false);
+  const [editWithdrawalDialogOpen, setEditWithdrawalDialogOpen] = useState(false);
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
   const [withdrawNotes, setWithdrawNotes] = useState("");
+  const [contributeAmount, setContributeAmount] = useState<number>(0);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
+  const [editWithdrawalAmount, setEditWithdrawalAmount] = useState<number>(0);
+  const [editWithdrawalNotes, setEditWithdrawalNotes] = useState("");
+  const [editWithdrawalDate, setEditWithdrawalDate] = useState<Date | undefined>();
   const { unlockAchievement, awardPoints } = useGamification(userId);
 
   useEffect(() => {
@@ -121,6 +132,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
       return;
     }
 
+    if (loading) return;
     setLoading(true);
 
     const { error } = await supabase.from("investments_current").insert({
@@ -145,7 +157,6 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
       description: "Seu investimento foi registrado com sucesso.",
     });
 
-    // Gamification
     await unlockAchievement("first_investment");
     await awardPoints("first_transaction", "Cadastrou investimento");
 
@@ -179,6 +190,60 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     await loadInvestments();
   };
 
+  // --- Contribute (Aportar) ---
+  const openContributeDialog = (investment: Investment) => {
+    setSelectedInvestment(investment);
+    setContributeAmount(0);
+    setContributeDialogOpen(true);
+  };
+
+  const handleContribute = async () => {
+    if (!selectedInvestment) return;
+
+    if (contributeAmount <= 0) {
+      toast({
+        title: "Erro",
+        description: "Informe um valor válido para o aporte",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+
+    const newValue = selectedInvestment.current_value + contributeAmount;
+
+    const { error } = await supabase
+      .from("investments_current")
+      .update({ current_value: newValue })
+      .eq("id", selectedInvestment.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao realizar aporte",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Aporte realizado!",
+      description: `R$ ${contributeAmount.toFixed(2)} adicionados a ${selectedInvestment.name}. Novo saldo: R$ ${newValue.toFixed(2)}`,
+    });
+
+    await awardPoints("first_transaction", "Realizou aporte em investimento");
+
+    setContributeDialogOpen(false);
+    setSelectedInvestment(null);
+    setContributeAmount(0);
+    await loadInvestments();
+    setLoading(false);
+  };
+
+  // --- Withdraw ---
   const openWithdrawDialog = (investment: Investment) => {
     setSelectedInvestment(investment);
     setWithdrawAmount(0);
@@ -207,9 +272,9 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
       return;
     }
 
+    if (loading) return;
     setLoading(true);
 
-    // Registrar o resgate no histórico
     const { error: withdrawalError } = await supabase.from("investment_withdrawals").insert({
       user_id: userId,
       investment_name: selectedInvestment.name,
@@ -230,7 +295,6 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     const newValue = selectedInvestment.current_value - withdrawAmount;
 
     if (newValue <= 0) {
-      // Se o resgate for total, deletar o investimento
       const { error } = await supabase
         .from("investments_current")
         .delete()
@@ -251,7 +315,6 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
         description: `Você resgatou R$ ${withdrawAmount.toFixed(2)} de ${selectedInvestment.name}. O investimento foi encerrado.`,
       });
     } else {
-      // Resgate parcial: atualizar o valor
       const { error } = await supabase
         .from("investments_current")
         .update({ current_value: newValue })
@@ -278,6 +341,60 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
     setWithdrawAmount(0);
     setWithdrawNotes("");
     await loadInvestments();
+    await loadWithdrawals();
+    setLoading(false);
+  };
+
+  // --- Edit Withdrawal ---
+  const openEditWithdrawalDialog = (withdrawal: Withdrawal) => {
+    setSelectedWithdrawal(withdrawal);
+    setEditWithdrawalAmount(withdrawal.amount);
+    setEditWithdrawalNotes(withdrawal.notes || "");
+    setEditWithdrawalDate(new Date(withdrawal.withdrawn_at));
+    setEditWithdrawalDialogOpen(true);
+  };
+
+  const handleEditWithdrawal = async () => {
+    if (!selectedWithdrawal) return;
+
+    if (editWithdrawalAmount <= 0) {
+      toast({
+        title: "Erro",
+        description: "Informe um valor válido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("investment_withdrawals")
+      .update({
+        amount: editWithdrawalAmount,
+        notes: editWithdrawalNotes || null,
+        withdrawn_at: editWithdrawalDate ? editWithdrawalDate.toISOString() : selectedWithdrawal.withdrawn_at,
+      })
+      .eq("id", selectedWithdrawal.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao editar resgate",
+        description: error.message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    toast({
+      title: "Resgate atualizado!",
+      description: "As informações do resgate foram atualizadas.",
+    });
+
+    setEditWithdrawalDialogOpen(false);
+    setSelectedWithdrawal(null);
     await loadWithdrawals();
     setLoading(false);
   };
@@ -310,6 +427,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newInvestment.current_value || ""}
               onChange={(e) =>
@@ -323,6 +441,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
             <Input
               type="number"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={newInvestment.estimated_rate || ""}
               onChange={(e) =>
@@ -390,9 +509,9 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                   <Card key={investment.id} className="border-border">
                     <CardContent className="pt-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-brand-blue">{investment.name}</h4>
-                          <div className="flex gap-4 mt-1 text-sm">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm">
                             <p className="text-muted-foreground">
                               Valor: <span className="font-semibold">R$ {Number(investment.current_value).toFixed(2)}</span>
                             </p>
@@ -401,7 +520,16 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openContributeDialog(investment)}
+                            className="h-8 w-8"
+                            title="Aportar"
+                          >
+                            <PlusCircle className="h-4 w-4 text-green-600" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -431,6 +559,56 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
         </CardContent>
       </Card>
 
+      {/* Dialog de Aporte */}
+      <Dialog open={contributeDialogOpen} onOpenChange={setContributeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-brand-blue">Novo Aporte</DialogTitle>
+            <DialogDescription>
+              {selectedInvestment && (
+                <>
+                  Adicione mais valor a <strong>{selectedInvestment.name}</strong>.
+                  <br />
+                  Saldo atual: <strong>R$ {Number(selectedInvestment.current_value).toFixed(2)}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Valor do Aporte (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={contributeAmount || ""}
+                onChange={(e) => setContributeAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            {selectedInvestment && contributeAmount > 0 && (
+              <div className="p-3 rounded-lg bg-muted text-sm">
+                <p className="text-muted-foreground">
+                  Novo saldo após aporte: <strong className="text-green-600">R$ {(selectedInvestment.current_value + contributeAmount).toFixed(2)}</strong>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContributeDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleContribute} disabled={loading}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Confirmar Aporte
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog de Resgate */}
       <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
         <DialogContent>
@@ -453,6 +631,7 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
               <Input
                 type="number"
                 step="0.01"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={withdrawAmount || ""}
                 onChange={(e) => setWithdrawAmount(parseFloat(e.target.value) || 0)}
@@ -510,10 +689,13 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                 <Card key={withdrawal.id} className="border-border">
                   <CardContent className="pt-4">
                     <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-brand-blue">{withdrawal.investment_name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(withdrawal.withdrawn_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                          📅 {format(new Date(withdrawal.withdrawn_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        <p className="text-base font-bold text-amber-600 mt-1">
+                          R$ {Number(withdrawal.amount).toFixed(2)}
                         </p>
                         {withdrawal.notes && (
                           <p className="text-sm text-muted-foreground mt-1 italic">
@@ -521,15 +703,22 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-lg font-bold text-amber-600">
-                          R$ {Number(withdrawal.amount).toFixed(2)}
-                        </p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => openEditWithdrawalDialog(withdrawal)}
+                          title="Editar resgate"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           onClick={() => handleDeleteWithdrawal(withdrawal.id)}
+                          title="Excluir resgate"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -544,6 +733,81 @@ export function CurrentInvestments({ userId }: CurrentInvestmentsProps) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setHistoryDialogOpen(false)}>
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Editar Resgate */}
+      <Dialog open={editWithdrawalDialogOpen} onOpenChange={setEditWithdrawalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-brand-blue">Editar Resgate</DialogTitle>
+            <DialogDescription>
+              {selectedWithdrawal && (
+                <>Editar resgate de <strong>{selectedWithdrawal.investment_name}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Valor do Resgate (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={editWithdrawalAmount || ""}
+                onChange={(e) => setEditWithdrawalAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data do Resgate</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !editWithdrawalDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editWithdrawalDate
+                      ? format(editWithdrawalDate, "dd/MM/yyyy", { locale: ptBR })
+                      : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editWithdrawalDate}
+                    onSelect={setEditWithdrawalDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observações (opcional)</Label>
+              <Input
+                placeholder="Ex: Resgate para emergência"
+                value={editWithdrawalNotes}
+                onChange={(e) => setEditWithdrawalNotes(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditWithdrawalDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditWithdrawal} disabled={loading}>
+              Salvar Alterações
             </Button>
           </DialogFooter>
         </DialogContent>

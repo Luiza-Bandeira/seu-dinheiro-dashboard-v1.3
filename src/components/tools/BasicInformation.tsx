@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, CreditCard, Building2, Wallet, AlertCircle, CheckCircle, Clock, Pencil, ArrowUpRight, ArrowDownLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { PatrimonyAssets } from "./PatrimonyAssets";
 interface BasicInformationProps {
   userId: string;
 }
@@ -580,8 +581,9 @@ export function BasicInformation({
       </Dialog>
 
       <Tabs defaultValue="banks" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-2">
           <TabsTrigger value="banks">Bancos e Cartões</TabsTrigger>
+          <TabsTrigger value="patrimony">Patrimônio</TabsTrigger>
           <TabsTrigger value="payable">Dívidas a Pagar</TabsTrigger>
           <TabsTrigger value="receivable">A Receber</TabsTrigger>
           <TabsTrigger value="summary">Resumo</TabsTrigger>
@@ -741,6 +743,10 @@ export function BasicInformation({
               </Card>
             </motion.div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="patrimony" className="mt-6">
+          <PatrimonyAssets userId={userId} />
         </TabsContent>
 
         <TabsContent value="payable" className="mt-6 space-y-4">

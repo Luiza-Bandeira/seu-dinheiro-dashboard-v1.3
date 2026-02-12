@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, Wrench, BarChart3, X, User, Bell, History, Shield, Trophy } from "lucide-react";
+import { Home, BookOpen, Wrench, BarChart3, X, User, Bell, History, Shield, Trophy, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -18,6 +18,7 @@ const navItems = [
   { to: "/tools", icon: Wrench, label: "Ferramentas" },
   { to: "/reports", icon: BarChart3, label: "Relatórios" },
   { to: "/history", icon: History, label: "Histórico Financeiro" },
+  { to: "/patrimony", icon: TrendingUp, label: "Evolução do Patrimônio" },
   { to: "/notifications", icon: Bell, label: "Notificações" },
   { to: "/profile", icon: User, label: "Perfil" },
 ];

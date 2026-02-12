@@ -465,6 +465,42 @@ export type Database = {
         }
         Relationships: []
       }
+      patrimony_assets: {
+        Row: {
+          acquisition_date: string | null
+          category: string
+          created_at: string
+          estimated_value: number
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acquisition_date?: string | null
+          category?: string
+          created_at?: string
+          estimated_value?: number
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acquisition_date?: string | null
+          category?: string
+          created_at?: string
+          estimated_value?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

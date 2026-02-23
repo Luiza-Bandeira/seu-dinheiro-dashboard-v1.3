@@ -150,6 +150,9 @@ export function DebtsWidget({ userId }: DebtsWidgetProps) {
   };
 
   const handleMarkAsPaid = async (id: string) => {
+    // Find the debt to get amount and details
+    const debt = debtsPayable.find(d => d.id === id);
+    
     const { error } = await supabase
       .from("debts_payable")
       .update({ status: "paid", paid_at: new Date().toISOString() })
@@ -160,7 +163,22 @@ export function DebtsWidget({ userId }: DebtsWidgetProps) {
       return;
     }
 
-    toast({ title: "Dívida paga!", description: "Status atualizado com sucesso." });
+    // Auto-create expense entry for the paid debt
+    if (debt) {
+      const today = new Date().toISOString().split("T")[0];
+      await supabase.from("finances").insert({
+        user_id: userId,
+        type: "fixed_expense" as any,
+        category: "Pagamento de Dívida",
+        value: Number(debt.amount),
+        description: `Pgto dívida: ${debt.creditor_name}${debt.description ? ` - ${debt.description}` : ""}`,
+        date: today,
+        source_type: "debt_payment",
+        source_id: debt.id,
+      });
+    }
+
+    toast({ title: "Dívida paga!", description: "Status atualizado e despesa registrada." });
     loadDebts();
   };
 

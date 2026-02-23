@@ -323,9 +323,26 @@ export function BasicInformation({
         variant: "destructive"
       });
     } else {
+      // Auto-create expense entry when debt is paid
+      if (status === "paid") {
+        const debt = debtsPayable.find(d => d.id === id);
+        if (debt) {
+          const today = new Date().toISOString().split("T")[0];
+          await supabase.from("finances").insert({
+            user_id: userId,
+            type: "fixed_expense" as any,
+            category: "Pagamento de Dívida",
+            value: Number(debt.amount),
+            description: `Pgto dívida: ${debt.creditor_name}${debt.description ? ` - ${debt.description}` : ""}`,
+            date: today,
+            source_type: "debt_payment",
+            source_id: debt.id,
+          });
+        }
+      }
       toast({
         title: "Atualizado!",
-        description: "Status da dívida alterado."
+        description: status === "paid" ? "Dívida paga e despesa registrada." : "Status da dívida alterado."
       });
       await loadDebtsPayable();
     }

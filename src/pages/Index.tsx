@@ -92,10 +92,10 @@ const Index = () => {
               setOriginalPrice(setting.setting_value || '5894');
               break;
             case 'landing_installments':
-              setInstallments(setting.setting_value || '12x de R$ 162,81');
+              setInstallments(setting.setting_value || '12x de R$ 165,48');
               break;
             case 'landing_payment_link':
-              setPaymentLink(setting.setting_value || 'https://mpago.la/1KiNKG2');
+              setPaymentLink(setting.setting_value || 'https://pay.hotmart.com/I104619180M?off=mqqj1rts&bid=1771966195512');
               break;
             case 'landing_special_condition':
               setSpecialCondition(setting.setting_value || 'janeiro');

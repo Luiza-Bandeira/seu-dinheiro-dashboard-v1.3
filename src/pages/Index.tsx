@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ArrowRight, Target, Eye, FolderOpen, Compass, RefreshCw, Users, GraduationCap, Quote, Clock, Star } from "lucide-react";
+import { Check, X, ArrowRight, Target, Eye, FolderOpen, Compass, RefreshCw, Users, GraduationCap, Quote, Clock, Star, ShieldCheck } from "lucide-react";
 // Helper function to convert video URLs to embed format
 const getEmbedUrl = (url: string): string => {
   if (!url) return '';
@@ -47,9 +47,8 @@ const formatPrice = (value: string): string => {
 const Index = () => {
   const navigate = useNavigate();
   const [videoUrl, setVideoUrl] = useState<string>("");
-  const [price, setPrice] = useState<string>("1600");
-  const [originalPrice, setOriginalPrice] = useState<string>("5894");
-  const [installments, setInstallments] = useState<string>("12x de R$ 165,48");
+  const [price, setPrice] = useState<string>("2000");
+  const [installments, setInstallments] = useState<string>("12x de R$ 206,85*");
   const [paymentLink, setPaymentLink] = useState<string>("https://pay.hotmart.com/I104619180M?off=mqqj1rts&bid=1771966195512");
   const [specialCondition, setSpecialCondition] = useState<string>("janeiro");
   useEffect(() => {
@@ -86,13 +85,10 @@ const Index = () => {
               setVideoUrl(setting.setting_value || '');
               break;
             case 'landing_price':
-              setPrice(setting.setting_value || '1600');
-              break;
-            case 'landing_original_price':
-              setOriginalPrice(setting.setting_value || '5894');
+              setPrice(setting.setting_value || '2000');
               break;
             case 'landing_installments':
-              setInstallments(setting.setting_value || '12x de R$ 165,48');
+              setInstallments(setting.setting_value || '12x de R$ 206,85*');
               break;
             case 'landing_payment_link':
               setPaymentLink(setting.setting_value || 'https://pay.hotmart.com/I104619180M?off=mqqj1rts&bid=1771966195512');
@@ -151,27 +147,27 @@ const Index = () => {
   const modules = [{
     number: 1,
     title: "Colocando Tudo na Mesa",
-    description: "Reúna todos os seus documentos financeiros e tenha uma visão completa da sua situação atual. Extratos, faturas, financiamentos - tudo organizado.",
+    description: "Você enxerga pela primeira vez o quadro completo da sua vida financeira. Não para se assustar — para entender de onde partir.",
     icon: FolderOpen
   }, {
     number: 2,
     title: "Olhando o Dinheiro de Perto",
-    description: "Analise cada entrada e saída. Entenda para onde seu dinheiro realmente vai e identifique padrões que você nunca percebeu.",
+    description: "Você aprende o que cada número diz sobre você. Onde o dinheiro vai, por quê vai, e o que isso revela sobre seus hábitos reais.",
     icon: Eye
   }, {
     number: 3,
     title: "Reorganizando a Vida Financeira",
-    description: "Estruture seu orçamento de forma sustentável. Crie um sistema que funciona para você, sem planilhas complicadas.",
+    description: "Você estrutura um sistema que funciona para a sua realidade — não para uma vida ideal que não existe.",
     icon: RefreshCw
   }, {
     number: 4,
     title: "Planos e Sonhos",
-    description: "Defina seus objetivos financeiros de curto, médio e longo prazo. Trace um caminho claro para realizá-los.",
+    description: "Você define o que quer e traça um caminho real para chegar lá. Com datas, com números, com clareza.",
     icon: Compass
   }, {
     number: 5,
     title: "Autonomia e Rotina Financeira",
-    description: "Desenvolva hábitos financeiros saudáveis. Crie uma rotina simples de acompanhamento que você vai manter.",
+    description: "Você desenvolve a mentalidade de quem sabe o que olhar, quando olhar e o que fazer com o que vê. Sem depender de ninguém.",
     icon: Target
   }];
   const valueItems = [{
@@ -214,17 +210,18 @@ const Index = () => {
         }} transition={{
           duration: 0.8
         }}>
-            <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6 capitalize">
-              Condição Especial de {specialCondition}
+            <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6">
+              Turma piloto — apenas 8 vagas
             </Badge>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
               Seu Dinheiro na Mesa
             </h1>
             
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
-              Um programa de clareza financeira para quem quer entender,
-              organizar e assumir o controle do próprio dinheiro.
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto px-2 leading-relaxed">
+              Você não precisa de mais uma planilha.
+              <br />
+              <span className="font-semibold">Você precisa aprender a pensar sobre o seu dinheiro.</span>
             </p>
             
             {/* Vídeo de Vendas */}
@@ -264,10 +261,10 @@ const Index = () => {
                 <Check className="w-4 h-4" /> Acesso por 1 ano
               </span>
               <span className="flex items-center gap-1">
-                <Check className="w-4 h-4" /> Aulas bônus das próximas turmas
+                <Check className="w-4 h-4" /> Encontros quinzenais ao vivo
               </span>
               <span className="flex items-center gap-1">
-                <Check className="w-4 h-4" /> Atualizações inclusas
+                <Check className="w-4 h-4" /> Garantia de 15 dias
               </span>
             </p>
           </motion.div>
@@ -284,23 +281,20 @@ const Index = () => {
             </h2>
           </motion.div>
 
-          <motion.div {...staggerContainer} className="space-y-3 sm:space-y-4 max-w-xl mx-auto px-2">
-            {["o dinheiro parece evaporar", "você sempre sente que está \"correndo atrás\"", "planilhas, apps, métodos… nada dura", "a vida financeira parece sempre confusa", "você trabalha, trabalha… mas não vê clareza"].map((pain, index) => <motion.div key={index} {...staggerItem} transition={{
-            delay: index * 0.1
-          }} className="flex items-center gap-3 sm:gap-4 bg-background/80 p-3 sm:p-4 rounded-2xl shadow-sm">
-                <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-destructive/10 rounded-full flex items-center justify-center">
-                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive" />
-                </div>
-                <p className="text-base sm:text-lg text-foreground">{pain}</p>
-              </motion.div>)}
+          <motion.div {...fadeInUp} transition={{ delay: 0.2 }} className="max-w-2xl mx-auto px-2">
+            <div className="bg-background/80 p-6 sm:p-8 rounded-2xl shadow-sm">
+              <p className="text-base sm:text-lg text-foreground leading-relaxed">
+                Você é organizada. Competente. Cuida de tudo na sua vida com responsabilidade. Mas quando o assunto é dinheiro, você age no escuro. Não sabe o que olhar. Não sabe o que aquele número significa. Não sabe se está indo bem ou mal. E ninguém nunca te ensinou isso de verdade.
+              </p>
+            </div>
           </motion.div>
 
           <motion.div {...fadeInUp} transition={{
           delay: 0.6
         }} className="text-center mt-8 sm:mt-12 px-2">
             <p className="text-lg sm:text-xl md:text-2xl font-semibold text-brand-blue">
-              ➡️ Isso não é falta de disciplina.<br />
-              <span className="text-primary">É falta de visão.</span>
+              ➡️ Não é sobre disciplina.<br />
+              <span className="text-primary">É sobre nunca ter tido um guia prático para o seu dinheiro específico.</span>
             </p>
           </motion.div>
         </div>
@@ -340,11 +334,8 @@ const Index = () => {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-brand-blue mb-3 sm:mb-4">
               Seu Dinheiro na Mesa
             </h2>
-            <p className="text-lg sm:text-xl text-primary font-medium mb-4 sm:mb-6">
-              Um programa individual de clareza financeira.
-            </p>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Criado e conduzido por uma economista, com metodologia simples, visual e humana — para pessoas que querem maturidade financeira sem complicação.
+              Um acompanhamento anual, em grupo pequeno, conduzido por uma economista. Você aprende o que precisa olhar, o que precisa preencher, como está o seu patrimônio — e o que fazer com isso. Toda quinzena, no seu cenário real. No final do ano, você sabe pensar sobre o seu dinheiro sozinha.
             </p>
           </div>
         </motion.div>
@@ -410,7 +401,7 @@ const Index = () => {
                   Encontros ao Vivo
                 </CardTitle>
                 <CardDescription className="text-lg">
-                  Aulas semanais ao vivo para tirar dúvidas com exemplos reais
+                  Aulas quinzenais ao vivo para tirar dúvidas com exemplos reais
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -422,13 +413,13 @@ const Index = () => {
                   </div>
                   <div className="text-center p-6 bg-white/50 rounded-2xl">
                     <Users className="w-10 h-10 text-brand-magenta mx-auto mb-3" />
-                    <p className="text-2xl font-bold text-brand-magenta">Próximas turmas</p>
-                    <p className="text-muted-foreground">acesso às aulas bônus</p>
+                    <p className="text-2xl font-bold text-brand-magenta">Grupo pequeno</p>
+                    <p className="text-muted-foreground">atenção personalizada</p>
                   </div>
                   <div className="text-center p-6 bg-white/50 rounded-2xl">
                     <RefreshCw className="w-10 h-10 text-brand-magenta mx-auto mb-3" />
-                    <p className="text-2xl font-bold text-brand-magenta">Atualizações</p>
-                    <p className="text-muted-foreground">conteúdos sempre atualizados</p>
+                    <p className="text-2xl font-bold text-brand-magenta">Quinzenal</p>
+                    <p className="text-muted-foreground">no seu cenário real</p>
                   </div>
                 </div>
               </CardContent>
@@ -512,7 +503,7 @@ const Index = () => {
         <div className="max-w-3xl mx-auto">
           <motion.div {...fadeInUp} className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-brand-blue mb-4">
-              Para pessoas que querem:
+              Para mulheres que querem:
             </h2>
           </motion.div>
 
@@ -539,7 +530,7 @@ const Index = () => {
           </motion.div>
 
           <motion.div {...staggerContainer} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {["Sessões individuais", "Mapeamento completo", "Plano personalizado", "Estrutura organizada", "Acompanhamento de evolução", "Ferramentas fáceis", "Suporte humano", "Acesso por 1 ano"].map((benefit, index) => <motion.div key={index} {...staggerItem} transition={{
+            {["Encontros quinzenais ao vivo", "Mapeamento completo", "Plano personalizado", "Estrutura organizada", "Acompanhamento de evolução", "Ferramentas fáceis", "Suporte humano", "Acesso por 1 ano"].map((benefit, index) => <motion.div key={index} {...staggerItem} transition={{
             delay: index * 0.08
           }} className="bg-card p-5 rounded-2xl shadow-sm border border-border/50 flex items-center gap-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -551,61 +542,46 @@ const Index = () => {
         </div>
       </section>
 
-      {/* SEÇÃO 12 — VALOR PERCEBIDO */}
+      {/* SEÇÃO — GARANTIA */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6">
+        <motion.div {...fadeInUp} className="max-w-3xl mx-auto">
+          <div className="bg-card p-6 sm:p-8 md:p-12 rounded-3xl shadow-lg border-2 border-green-500/30 text-center mx-2">
+            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShieldCheck className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-brand-blue mb-3 sm:mb-4">
+              Garantia de Experiência Real — 15 dias
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+              Você participa de 2 encontros ao vivo e coloca a mão na ferramenta. Se não fizer sentido para você — devolvemos 100% do valor investido. Sem perguntas, sem burocracia. Oferecemos esse prazo porque acreditamos que você vai entender o seu dinheiro diferente já no primeiro encontro.
+            </p>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* SEÇÃO 12 — PREÇO */}
       <section className="py-20 px-6 bg-gradient-to-b from-brand-pink/5 to-brand-pink/20">
         <div className="max-w-3xl mx-auto">
           <motion.div {...fadeInUp} className="text-center mb-12">
-            <Badge className="bg-brand-magenta text-white mb-4 px-4 py-2 capitalize">
-              Condição Especial de {specialCondition}
+            <Badge className="bg-brand-magenta text-white mb-4 px-4 py-2">
+              Turma piloto — apenas 8 vagas
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-brand-blue mb-4">
-              Quanto vale realmente este programa?
+              Invista na sua clareza financeira
             </h2>
-            <p className="text-lg text-muted-foreground">
-              Veja o valor real do que você está recebendo
-            </p>
           </motion.div>
 
           <motion.div {...fadeInUp} className="bg-card rounded-3xl shadow-lg border border-border/50 overflow-hidden">
-            {/* Items list */}
-            <div className="divide-y divide-border/50">
-              {valueItems.map((item, index) => <motion.div key={index} initial={{
-              opacity: 0,
-              x: -20
-            }} whileInView={{
-              opacity: 1,
-              x: 0
-            }} viewport={{
-              once: true
-            }} transition={{
-              delay: index * 0.1
-            }} className="flex items-center justify-between p-5 md:p-6">
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">{item.subtitle}</p>
-                  </div>
-                  <p className="text-lg md:text-xl font-bold text-brand-blue ml-4">
-                    {item.price}
-                  </p>
-                </motion.div>)}
-            </div>
-
-            {/* Total section */}
-            <div className="bg-gradient-to-r from-brand-pink/20 to-brand-pink/30 p-6 md:p-8">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-lg font-semibold text-brand-blue">Valor Total Real:</p>
-                <p className="text-2xl font-bold text-brand-blue line-through opacity-60">
-                  R$ {formatPrice(originalPrice)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-xl font-bold text-brand-blue">Você paga apenas:</p>
-                <p className="text-3xl md:text-4xl font-bold text-primary">
-                  R$ {formatPrice(price)}
-                </p>
-              </div>
-              <p className="text-center mt-4 text-brand-magenta font-medium capitalize">
-                Condição especial válida apenas em {specialCondition}
+            <div className="p-8 md:p-12 text-center">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                R$ {formatPrice(price)}
+              </p>
+              <p className="text-lg text-muted-foreground mb-1">à vista</p>
+              <p className="text-lg text-brand-magenta font-medium mb-2">
+                ou {installments}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                *valor sujeito a juros do cartão
               </p>
             </div>
           </motion.div>
@@ -615,27 +591,30 @@ const Index = () => {
       {/* SEÇÃO 13 — CTA FINAL */}
       <section className="py-20 px-6 bg-gradient-to-br from-brand-blue to-brand-blue/90">
         <motion.div {...fadeInUp} className="max-w-3xl mx-auto text-center text-white">
-          <Badge className="bg-brand-magenta mb-6 px-4 py-2 text-white capitalize">
-            Condição Especial de {specialCondition}
+          <Badge className="bg-brand-magenta mb-6 px-4 py-2 text-white">
+            Turma piloto — apenas 8 vagas
           </Badge>
           
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
             Comece sua jornada de clareza financeira
           </h2>
-          
-          <p className="text-xl text-white/80 mb-8">
-            Clareza financeira está a um passo de distância.
+
+          {/* Frase âncora */}
+          <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-brand-pink mb-8 italic">
+            "Clareza financeira não é saber usar uma planilha.<br />
+            É saber o que perguntar pro seu próprio dinheiro."
           </p>
           
           {/* Pricing */}
           <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 mb-8 inline-block">
-            <p className="text-sm text-white/70 line-through mb-1">De R$ {formatPrice(originalPrice)}</p>
             <p className="text-4xl md:text-5xl font-bold text-white mb-2">
               R$ {formatPrice(price)}
             </p>
+            <p className="text-sm text-white/70 mb-1">à vista</p>
             <p className="text-lg text-brand-pink font-medium">
               ou {installments}
             </p>
+            <p className="text-xs text-white/50 mt-1">*valor sujeito a juros do cartão</p>
           </div>
 
           <div className="flex flex-col gap-4 justify-center items-center">
@@ -649,10 +628,10 @@ const Index = () => {
                 <Check className="w-4 h-4" /> Acesso por 1 ano
               </span>
               <span className="flex items-center gap-1">
-                <Check className="w-4 h-4" /> Aulas bônus das próximas turmas
+                <Check className="w-4 h-4" /> Encontros quinzenais ao vivo
               </span>
               <span className="flex items-center gap-1">
-                <Check className="w-4 h-4" /> Atualizações inclusas
+                <Check className="w-4 h-4" /> Garantia de 15 dias
               </span>
             </p>
           </div>

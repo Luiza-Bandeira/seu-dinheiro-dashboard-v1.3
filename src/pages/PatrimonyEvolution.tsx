@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from "recharts";
-import { TrendingUp, Home, Wallet, BarChart3 } from "lucide-react";
+import { TrendingUp, Home, Wallet, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { format, subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -144,6 +144,41 @@ export default function PatrimonyEvolution() {
 
     return points;
   }, [investments, contributions, withdrawals, assets, period, totalInvestments, avgRate]);
+
+  const totalContributed = contributions.reduce((s, c) => s + Number(c.amount), 0);
+  const totalWithdrawn = withdrawals.reduce((s, w) => s + Number(w.amount), 0);
+  const netPrincipal = totalContributed - totalWithdrawn;
+
+  const principalChartData = useMemo(() => {
+    const now = new Date();
+    const monthsBack = period === "yearly" ? 24 : 12;
+    const step = period === "yearly" ? 12 : period === "quarterly" ? 3 : 1;
+    const points: { label: string; aportes: number; resgates: number; liquido: number }[] = [];
+
+    for (let i = monthsBack; i >= 0; i -= step) {
+      const pointDate = subMonths(now, i);
+      const monthEnd = endOfMonth(pointDate);
+      const label = period === "yearly"
+        ? format(pointDate, "yyyy")
+        : format(pointDate, "MMM/yy", { locale: ptBR });
+
+      const aportes = contributions
+        .filter(c => new Date(c.contributed_at) <= monthEnd)
+        .reduce((s, c) => s + Number(c.amount), 0);
+
+      const resgates = withdrawals
+        .filter(w => new Date(w.withdrawn_at) <= monthEnd)
+        .reduce((s, w) => s + Number(w.amount), 0);
+
+      points.push({
+        label,
+        aportes: Math.round(aportes * 100) / 100,
+        resgates: Math.round(resgates * 100) / 100,
+        liquido: Math.round((aportes - resgates) * 100) / 100,
+      });
+    }
+    return points;
+  }, [contributions, withdrawals, period]);
 
   const formatCurrency = (value: number) =>
     `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -305,6 +340,94 @@ export default function PatrimonyEvolution() {
                         fill="url(#colorTotal)"
                         strokeWidth={2.5}
                       />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Principal Invested Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-brand-blue flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Evolução do Capital Investido
+                </CardTitle>
+                <CardDescription>
+                  Acompanhe se seus aportes superam os resgates ao longo do tempo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Summary indicators */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl">
+                    <ArrowUpRight className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Aportado</p>
+                      <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalContributed)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl">
+                    <ArrowDownRight className="h-5 w-5 text-destructive" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Resgatado</p>
+                      <p className="text-sm font-bold text-destructive">{formatCurrency(totalWithdrawn)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl">
+                    {netPrincipal >= 0 ? (
+                      <ArrowUpRight className="h-5 w-5 text-brand-blue" />
+                    ) : (
+                      <ArrowDownRight className="h-5 w-5 text-destructive" />
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">Principal Líquido</p>
+                      <p className={`text-sm font-bold ${netPrincipal >= 0 ? 'text-brand-blue' : 'text-destructive'}`}>
+                        {formatCurrency(netPrincipal)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {principalChartData.length === 0 || (totalContributed === 0 && totalWithdrawn === 0) ? (
+                  <p className="text-center text-muted-foreground py-12">
+                    Registre aportes e resgates nos seus investimentos para visualizar a evolução.
+                  </p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={350}>
+                    <AreaChart data={principalChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorAportes" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorResgates" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorLiquido" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#0B2860" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#0B2860" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [
+                          `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+                          name === "aportes" ? "Aportes Acumulados" : name === "resgates" ? "Resgates Acumulados" : "Principal Líquido",
+                        ]}
+                        labelFormatter={(label) => `Período: ${label}`}
+                      />
+                      <Legend
+                        formatter={(value) =>
+                          value === "aportes" ? "Aportes" : value === "resgates" ? "Resgates" : "Principal Líquido"
+                        }
+                      />
+                      <Area type="monotone" dataKey="aportes" stroke="#16a34a" fill="url(#colorAportes)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="resgates" stroke="#ef4444" fill="url(#colorResgates)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="liquido" stroke="#0B2860" fill="url(#colorLiquido)" strokeWidth={2.5} />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}

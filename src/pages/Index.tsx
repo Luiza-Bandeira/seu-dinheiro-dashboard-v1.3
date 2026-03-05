@@ -211,7 +211,7 @@ const Index = () => {
           duration: 0.8
         }}>
             <Badge className="bg-brand-magenta text-white px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-lg mb-4 sm:mb-6">
-              Turma piloto — apenas 8 vagas
+              Turma Especial — apenas 10 vagas
             </Badge>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight px-2">
@@ -564,7 +564,7 @@ const Index = () => {
         <div className="max-w-3xl mx-auto">
           <motion.div {...fadeInUp} className="text-center mb-12">
             <Badge className="bg-brand-magenta text-white mb-4 px-4 py-2">
-              Turma piloto — apenas 8 vagas
+              Turma Especial — apenas 10 vagas
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-brand-blue mb-4">
               Invista na sua clareza financeira
